@@ -1,2 +1,3 @@
 src/resumeParser/env
 src/resumeParser/test_resumes
+*.DS_Store

@@ -6,13 +6,16 @@ from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfparser import PDFParser
 
+from pyresparser import ResumeParser
+
 import nltk
 import os
 import json
 import requests
+import pprint
 
-SKILLS = None
 # Placeeholder skills database
+SKILLS = None
 with open('data/skills.json', 'r') as f:
     SKILLS = json.load(f)
     f.close()
@@ -31,6 +34,7 @@ def systemPrep():
     nltk.download('maxent_ne_chunker')
     nltk.download('words')
 
+# Call skillAPI to check if a string is a skill recognized by the API
 def checkSkill(skillname):
     req_url = f'https://api.promptapi.com/skills?q={skillname}&count=1'
     headers = { "apikey": '3fB6ppgySBe5rN3w2kA91f3qLRq8yINc' }
@@ -55,6 +59,7 @@ def fetchText(filename):
 
     return output_string.getvalue()
 
+# PLACEHOLDER FUNCTION -- Responsible for loading in json file of known skills and known non-skill words
 def openSkillsDB():
     with open( 'data/positiveSkills.json', 'r' ) as f:
         with open( 'data/nonSkills.json', 'r' ) as f2:
@@ -67,6 +72,7 @@ def openSkillsDB():
 
     return knownSkills, nonSkills
 
+# PLACEHOLDER FUNCTION -- Responsible for closing json file of known skills and known non-skill words
 def closeSkillsDB(knownSkills, nonSkills):
     with open( 'data/positiveSkills.json', 'w' ) as f:
         with open( 'data/nonSkills.json', 'w' ) as f2:
@@ -79,7 +85,7 @@ def closeSkillsDB(knownSkills, nonSkills):
 
 
 # Meat of the script, parses a string to extract resume skills
-def extract_skills(corpus):
+def extract_skills(corpus, filename):
     stop_words = set(nltk.corpus.stopwords.words('english'))
     word_tokens = nltk.tokenize.word_tokenize(corpus)
 
@@ -119,13 +125,19 @@ def extract_skills(corpus):
         else:
             ns.append(ngram.lower())
 
-    print( skills )
+    extraction_package_skills = ResumeParser(filename).get_extracted_data()['skills']
+    for s in extraction_package_skills:
+        skills.add(s.lower())
 
     closeSkillsDB(ks, ns)
     return skills
 
 if __name__ == "__main__":
     systemPrep()
-    # fetchText(input("Enter resume file path\n"))
-    resumeText = fetchText('test_resumes/Sean College Resume.pdf')
-    extract_skills(resumeText)
+    # filename = 'test_resumes/Sean College Resume.pdf'
+    filename = 'test_resumes/alden-resume.pdf'
+    resumeText = fetchText(filename)
+    skills = extract_skills(resumeText, filename)
+    pprint.pprint(skills)    
+
+
