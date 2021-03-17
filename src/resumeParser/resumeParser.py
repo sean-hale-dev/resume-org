@@ -7,7 +7,7 @@ from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfparser import PDFParser
 
 from pyresparser import ResumeParser
-
+import click
 import nltk
 import os
 import json
@@ -132,12 +132,22 @@ def extract_skills(corpus, filename):
     closeSkillsDB(ks, ns)
     return skills
 
-if __name__ == "__main__":
-    systemPrep()
-    # filename = 'test_resumes/Sean College Resume.pdf'
-    filename = 'test_resumes/alden-resume.pdf'
-    resumeText = fetchText(filename)
-    skills = extract_skills(resumeText, filename)
-    pprint.pprint(skills)    
+@click.command()
+@click.argument('resumeFile')
+def main(resumeFile):
+    print(resumeFile)
+    print("This is a test")
+    resumeFile = resumeFile.split('.')
+    resumeFileExt = resumeFile[-1].lower()
+
+    print(resumeFileExt)
+
+# if __name__ == "__main__":
+#     systemPrep()
+#     # filename = 'test_resumes/Sean College Resume.pdf'
+#     filename = 'test_resumes/alden-resume.pdf'
+#     resumeText = fetchText(filename)
+#     skills = extract_skills(resumeText, filename)
+#     pprint.pprint(skills)    
 
 
