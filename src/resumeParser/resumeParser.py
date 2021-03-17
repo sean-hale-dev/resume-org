@@ -1,18 +1,18 @@
-from io import StringIO
 from pdfminer.converter import TextConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfparser import PDFParser
-
+from io import StringIO
+from alive_progress import alive_bar
 from pyresparser import ResumeParser
-import click
-import nltk
-import os
-import json
-import requests
-import pprint
+
+import json, os, pprint, time, warnings
+import click, docx2txt, nltk, requests
+
+# Surpress spacy warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 
 # Placeeholder skills database
 SKILLS = None
@@ -46,7 +46,7 @@ def checkSkill(skillname):
     raise Exception(f"API Error: { res.get('message') }")
 
 # Extract the text from the input document
-def fetchText(filename):
+def fetchTextPDF(filename):
     output_string = StringIO()
     with open(filename, 'rb') as f:
         parser = PDFParser(f)
@@ -58,6 +58,9 @@ def fetchText(filename):
             interpreter.process_page(page)
 
     return output_string.getvalue()
+
+def fetchTextDocX(filename):
+    return docx2txt.process(filename)
 
 # PLACEHOLDER FUNCTION -- Responsible for loading in json file of known skills and known non-skill words
 def openSkillsDB():
@@ -97,33 +100,44 @@ def extract_skills(corpus, filename):
 
     ks, ns = openSkillsDB()
 
-    for token in filtered_tokens:
-        if token.lower() in ks:
-            skills.add(token.lower())
-        elif token.lower() in ns:
-            continue
-        elif token.lower() in SKILLS:
-            ks.append(token.lower())
-            skills.add(token.lower())
-        elif checkSkill(token.lower()):
-            ks.append(token.lower())
-            skills.add(token.lower())
-        else:
-            ns.append(token.lower())
+    with alive_bar(len(filtered_tokens), title="Parsing tokens...", bar="circles") as bar:
+        for token in filtered_tokens:
 
-    for ngram in bitri:
-        if ngram.lower() in ks:
-            skills.add(ngram.lower())
-        elif ngram.lower() in ns:
-            continue
-        elif ngram.lower() in SKILLS:
-             ks.append(ngram.lower())
-             skills.add(ngram.lower())
-        elif checkSkill(ngram.lower()):
-            ks.append(ngram.lower())
-            skills.add(ngram.lower())
-        else:
-            ns.append(ngram.lower())
+            bar()
+
+            if token.lower() in ks:
+                skills.add(token.lower())
+            elif token.lower() in ns:
+                continue
+            elif token.lower() in SKILLS:
+                ks.append(token.lower())
+                skills.add(token.lower())
+            elif checkSkill(token.lower()):
+                ks.append(token.lower())
+                skills.add(token.lower())
+            else:
+                ns.append(token.lower())
+            time.sleep(0.0001)
+
+
+    with alive_bar(len(bitri), title="Parsing bigrams and trigrams...", bar="circles") as bar:
+        for ngram in bitri:
+
+            bar()
+
+            if ngram.lower() in ks:
+                skills.add(ngram.lower())
+            elif ngram.lower() in ns:
+                continue
+            elif ngram.lower() in SKILLS:
+                 ks.append(ngram.lower())
+                 skills.add(ngram.lower())
+            elif checkSkill(ngram.lower()):
+                ks.append(ngram.lower())
+                skills.add(ngram.lower())
+            else:
+                ns.append(ngram.lower())
+            time.sleep(0.0001)
 
     extraction_package_skills = ResumeParser(filename).get_extracted_data()['skills']
     for s in extraction_package_skills:
@@ -134,20 +148,25 @@ def extract_skills(corpus, filename):
 
 @click.command()
 @click.argument('resumeFile')
-def main(resumeFile):
-    print(resumeFile)
-    print("This is a test")
-    resumeFile = resumeFile.split('.')
-    resumeFileExt = resumeFile[-1].lower()
+def cli(resumefile):
+    resumefileExt = resumefile.split('.')[-1].lower()
 
-    print(resumeFileExt)
+    text = None
 
-# if __name__ == "__main__":
-#     systemPrep()
-#     # filename = 'test_resumes/Sean College Resume.pdf'
-#     filename = 'test_resumes/alden-resume.pdf'
-#     resumeText = fetchText(filename)
-#     skills = extract_skills(resumeText, filename)
-#     pprint.pprint(skills)    
+    if resumefileExt == "pdf":
+        text = fetchTextPDF(resumefile)
+    elif resumefileExt == "docx":
+        text = fetchTextDocX(resumefile)
+    else:
+        click.echo(f"ERROR: Unsupported filetype .{resumefileExt}")
+        return
 
+    if not text:
+        click.echo(f"ERROR: Something went wrong, we're unable to extract your resume data")
+        return
+
+    skills = extract_skills(text, resumefile) 
+    
+    print(skills)
+    # pprint.pprint(skills)
 
