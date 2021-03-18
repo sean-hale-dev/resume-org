@@ -10,12 +10,18 @@ import {
 } from "react-router-dom";
 import Header from './components/shared/header';
 import Home from './components/homepage';
+import Resume from './components/resume';
+import Database from './components/database';
+import Reports from './components/reports';
 function App() {
   return (
     <ThemeProvider theme={resume_org_theme}>
       <Router>
         <Switch>
-          <Route path="/" component={Home} />
+          <Route exact path="/" component={Home} />
+          <Route exact path="/resume" component={Resume} />
+          <Route exact path="/database" component={Database} />
+          <Route exact path="/reports" component={Reports} />
         </Switch>
       </Router>
     </ThemeProvider>

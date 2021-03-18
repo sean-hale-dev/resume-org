@@ -9,6 +9,7 @@ import IconButton from '@material-ui/core/IconButton';
 import MenuIcon from '@material-ui/icons/Menu';
 import Typography from '@material-ui/core/Typography';
 import Grid from '@material-ui/core/Grid';
+import Link from '@material-ui/core/Link';
 
 const PAGES = [
   {
@@ -57,7 +58,7 @@ class Header extends Component {
     console.log(`Selected page: ${selectedPage}`);
     return <AppBar position="static">
       <Grid container>
-        <Grid item xs={4}>
+        <Grid item xs={1}>
           <Toolbar>
             <SwipeableDrawer
               anchor={"left"}
@@ -67,9 +68,11 @@ class Header extends Component {
             >
               <List style={{width: "250px"}}>
                 {PAGES.map(page => 
-                  <ListItem button key={page.title}>
-                    <ListItemText primary={page.title} />
-                  </ListItem>
+                  <Link href={page.link} color="inherit" >
+                    <ListItem button key={page.title}>
+                      <ListItemText disableTypography primary={page.title} style={{fontWeight: selectedPage == page.title ? "bold" : "normal"}}/>
+                    </ListItem>
+                  </Link>
                 )}
               </List>
             </SwipeableDrawer>
@@ -79,7 +82,7 @@ class Header extends Component {
             
           </Toolbar>
         </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={10}>
           <Toolbar style={{justifyContent: "center"}}>
             <Typography variant="h3">
               {selectedPage}
