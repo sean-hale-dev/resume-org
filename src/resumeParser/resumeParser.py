@@ -23,7 +23,7 @@ with open('data/skills.json', 'r') as f:
 if SKILLS == None:
     raise ValueError("Unable to read in skills database")
 
-SKILLS = SKILLS['skills']
+SKILLS = set(SKILLS['skills'])
 
 
 # Ensure that the needed NLTK packages are installed before running the parser
@@ -73,10 +73,12 @@ def openSkillsDB():
 
         f.close()
 
-    return knownSkills, nonSkills
+    return set(knownSkills), set(nonSkills) 
 
 # PLACEHOLDER FUNCTION -- Responsible for closing json file of known skills and known non-skill words
 def closeSkillsDB(knownSkills, nonSkills):
+    knownSkills = list(knownSkills)
+    nonSkills = list(nonSkills)
     with open( 'data/positiveSkills.json', 'w' ) as f:
         with open( 'data/nonSkills.json', 'w' ) as f2:
             json.dump(knownSkills, f)
@@ -86,6 +88,13 @@ def closeSkillsDB(knownSkills, nonSkills):
 
         f.close()
 
+def checkIfInCorpus(word, obj):
+    branch = obj[word[0]]  
+    while not branch['leaf'] and branch[pos] < len(word):
+        branch = branch['branch']
+
+    return if word in branch['leaves']
+
 
 # Meat of the script, parses a string to extract resume skills
 def extract_skills(corpus, filename):
@@ -94,6 +103,8 @@ def extract_skills(corpus, filename):
 
     filtered_tokens = [ w for w in word_tokens if w not in stop_words ]
     filtered_tokens = [ w for w in word_tokens if w.isalpha() ]
+
+    filtered_tokens = set(filtered_tokens)
 
     bitri = list(map(' '.join, nltk.everygrams(filtered_tokens, 2, 3)))
     skills = set()
@@ -110,13 +121,13 @@ def extract_skills(corpus, filename):
             elif token.lower() in ns:
                 continue
             elif token.lower() in SKILLS:
-                ks.append(token.lower())
+                ks.add(token.lower())
                 skills.add(token.lower())
             elif checkSkill(token.lower()):
-                ks.append(token.lower())
+                ks.add(token.lower())
                 skills.add(token.lower())
             else:
-                ns.append(token.lower())
+                ns.add(token.lower())
             time.sleep(0.0001)
 
 
@@ -130,13 +141,13 @@ def extract_skills(corpus, filename):
             elif ngram.lower() in ns:
                 continue
             elif ngram.lower() in SKILLS:
-                 ks.append(ngram.lower())
+                 ks.add(ngram.lower())
                  skills.add(ngram.lower())
             elif checkSkill(ngram.lower()):
-                ks.append(ngram.lower())
+                ks.add(ngram.lower())
                 skills.add(ngram.lower())
             else:
-                ns.append(ngram.lower())
+                ns.add(ngram.lower())
             time.sleep(0.0001)
 
     extraction_package_skills = ResumeParser(filename).get_extracted_data()['skills']
