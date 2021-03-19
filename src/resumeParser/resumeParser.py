@@ -14,16 +14,119 @@ import click, docx2txt, nltk, requests
 # Surpress spacy warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
+class DatabaseInterface:
+    def __init__(self, skillsFilename="data/knownSkills.json", nonSkillsFilename="data/knownNonSkills.json"):
+        self.skillsFName = skillsFilename
+        self.notSkillsFName = nonSkillsFilename
+
+        self.skills = set(self._load_file(self.skillsFName))
+        self.notSkills = set(self._load_file(self.notSkillsFName))
+
+    def _load_file(self, filename):
+        '''
+        Loads in a JSON object from a file
+
+        Parameters:
+            filename (string): The name of the file to be loaded
+
+        Returns:
+            List/Dict: The parsed JSON obj into python struct
+        '''
+        with open(filename, 'r') as f:
+            ret = json.load(f)
+            f.close()
+        return ret
+    
+    def _save_file(self, filename, obj):
+        '''
+        Serializes this class into a file essentially
+
+        Parameters:
+            filename (string): The name of the file to be written 
+
+        Returns:
+            List/Dict: The parsed JSON obj into python struct
+        '''
+
+        with open(filename, 'w') as f:
+            json.dump(obj, f, indent=4)
+
+    def isSkill(self, skill):
+        '''
+        Checks to see if a given skill is a skill known in our data 
+
+        Parameters:
+            skill (string): The skill being checked
+
+        Returns:
+            Int:
+                0: This is an unknown term
+                1: This is a known skill
+                -1: This is a known non-skill
+        '''
+
+        if skill in self.skills: return 1
+        elif skill in self.notSkills: return -1
+
+        return 0
+
+    def recordSkill(self, skill):
+        '''
+        Saves the skill into the self.skills
+
+        Parameters:
+            skill (string): The skill being saved
+        '''
+
+        self.skills.add(skill)
+
+    def recordNotSkill(self, notSkill):
+        '''
+        Saves the non-skill into the self.notSkills
+
+        Parameters:
+            notSkill (string): The skill being saved
+        '''
+        
+        self.notSkills(notSkills)
+
+    def close(self):
+        '''
+        Saves the internal data of this class
+        '''
+    
+        self.skills = list(self.skills)
+        self.notSkills = list(self.notSkills)
+
+        self._save_file(self.skillsFName, self.skills)
+        self._save_file(self.notSkillsFName, self.notSkills)
+
+
+
 # Ensure that the needed NLTK packages are installed before running the parser
 def systemPrep():
+    '''
+    Optional function to collect necesary nltk libraries for this project
+    '''
     nltk.data.path.append(f'{os.getcwd()}/env/nltk_data')
     nltk.download('punkt')
     nltk.download('averaged_perceptron_tagger')
     nltk.download('maxent_ne_chunker')
     nltk.download('words')
 
-# Call skillAPI to check if a string is a skill recognized by the API
-def checkSkill(skillname):
+def apiCheck(skillname):
+    '''
+    Call skillAPI to check if a string is a skill recognized by the API
+
+    Parameters:
+        skillname (string): Skill being checked by the API
+
+    Returns:
+        Boolean: 
+            True: The API recognized the word as a skill
+            False: The API did not recognize the word as a skill
+
+    '''
     req_url = f'https://api.promptapi.com/skills?q={skillname}&count=1'
     headers = { "apikey": '3fB6ppgySBe5rN3w2kA91f3qLRq8yINc' }
     response = requests.request('GET', req_url, headers=headers)
@@ -35,6 +138,15 @@ def checkSkill(skillname):
 
 # Extract the text from the input document
 def fetchTextPDF(filename):
+    '''
+    Extract text from a pdf document
+
+    Parameters:
+        filename (string): The PDF document to extract text from
+
+    Returns:
+        String: The extracted text
+    '''
     output_string = StringIO()
     with open(filename, 'rb') as f:
         parser = PDFParser(f)
@@ -48,40 +160,28 @@ def fetchTextPDF(filename):
     return str(output_string.getvalue())
 
 def fetchTextDocX(filename):
+    '''
+    Extract text from a docx document
+
+    Parameters:
+        filename (string): The docx document to extract text from
+
+    Returns:
+        String: The extracted text
+    '''
+
     return docx2txt.process(filename)
 
-# PLACEHOLDER FUNCTION -- Responsible for loading in json file of known skills and known non-skill words
-def openSkillsDB():
-    with open( 'data/knownSkills.json', 'r' ) as f:
-        knownSkills = json.load(f)
-        f.close()
+def extract_skills(corpus):
+    '''
+    Parses a string to extract resume skills
 
-    with open('data/knownNonSkills.json', 'r') as f:
-        nonSkills = json.load(f)
-        f.close()
+    Parameters:
+        corpus (string): The extracted text of a resume
 
-    return set(knownSkills), set(nonSkills) 
-
-# PLACEHOLDER FUNCTION -- Responsible for closing json file of known skills and known non-skill words
-def closeSkillsDB(knownSkills, nonSkills):
-    knownSkills = list(knownSkills)
-    nonSkills = list(nonSkills)
-
-    with open('data/knownNonSkills.json', 'r') as f:
-        ns = json.load(f)
-        assert(ns != nonSkills)
-        f.close()
-
-    with open( 'data/knownSkills.json', 'w' ) as f:
-        json.dump( knownSkills, f, indent=4 )
-        f.close()
-
-    with open('data/knownNonSkills.json', 'w') as f:
-        json.dump( nonSkills, f, indent=4 )
-        f.close()
-
-# Meat of the script, parses a string to extract resume skills
-def extract_skills(corpus, filename):
+    Returns:
+        skills (set): The extracted skills of the corpus
+    '''
     stop_words = set(nltk.corpus.stopwords.words('english'))
     word_tokens = nltk.tokenize.word_tokenize(corpus)
 
@@ -89,59 +189,31 @@ def extract_skills(corpus, filename):
     filtered_tokens = [ w.lower() for w in word_tokens if w.isalpha() ]
     filtered_tokens = set(filtered_tokens)
 
-    bitri = list(map(' '.join, nltk.everygrams(filtered_tokens, 2, 3)))
+    bitri = set(map(' '.join, nltk.everygrams(filtered_tokens, 2, 3)))
 
     skills = set()
 
-    ks, ns = openSkillsDB()
+    db = DatabaseInterface()
 
     with alive_bar(len(filtered_tokens), title="Parsing tokens...", bar="circles") as bar:
         for token in filtered_tokens:
-            path = ''
-            if token in ks: 
-                skills.add(token)
-                path = "Found in knowledge base"
-            elif token in ns: 
-                path = "Found in ns"
-                continue
-            elif checkSkill(token):
-                ks.add(token)
-                skills.add(token)
-                path = "Checking API"
-            else:
-                ns.add(token)
-                path = "None"
+            isSkill = db.isSkill(token)
 
-            time.sleep(0.0001)
+            if isSkill == 1: skills.add(token)
+            elif isSkill == 0:
+                isSkill = apiCheck(token)
+                if isSkill:
+                    skills.add(token)
+                    db.recordSkill(token)
+                else: db.recordNotSkill(token)
+
+            time.sleep(0.001)
             bar()
-            print(path)
 
-    with alive_bar(len(bitri), title="Parsing bigrams and trigrams...", bar="circles") as bar:
-        for token in bitri:
-            path = ''
-            if token in ks: 
-                skills.add(token)
-                path = "Found in knowledge base"
-            elif token in ns: 
-                path = "Found in ns"
-                continue
-            elif checkSkill(token):
-                ks.add(token)
-                skills.add(token)
-                path = "Checking API"
-            else:
-                ns.add(token)
+    db.close()
 
-            time.sleep(0.0001)
-            bar()
-            print(f"{path} -- {token}")
-                  
-    extraction_package_skills = ResumeParser(filename).get_extracted_data()['skills']
-    for s in extraction_package_skills:
-        skills.add(s.lower())
-
-    closeSkillsDB(ks, ns)
     return skills
+
 
 @click.command()
 @click.argument('resumeFile')
@@ -150,10 +222,8 @@ def cli(resumefile):
 
     text = None
 
-    if resumefileExt == "pdf":
-        text = fetchTextPDF(resumefile)
-    elif resumefileExt == "docx":
-        text = fetchTextDocX(resumefile)
+    if resumefileExt == "pdf": text = fetchTextPDF(resumefile)
+    elif resumefileExt == "docx": text = fetchTextDocX(resumefile)
     else:
         click.echo(f"ERROR: Unsupported filetype .{resumefileExt}")
         return
@@ -162,5 +232,5 @@ def cli(resumefile):
         click.echo(f"ERROR: Something went wrong, we're unable to extract your resume data")
         return
 
-    skills = extract_skills(text, resumefile) 
+    skills = extract_skills(text) 
     
