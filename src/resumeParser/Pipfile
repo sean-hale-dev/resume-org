@@ -10,6 +10,7 @@ alive-progress = "*"
 "pdfminer.six" = "*"
 nltk = "*"
 requests = "*"
+requests-threads = "*"
 
 [dev-packages]
 neovim = "*"

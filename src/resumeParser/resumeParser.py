@@ -10,9 +10,12 @@ from pyresparser import ResumeParser
 
 import json, os, pprint, time, warnings
 import click, docx2txt, nltk, requests
+from requests_threads import AsyncSession
 
 # Surpress spacy warnings
 warnings.filterwarnings("ignore", category=UserWarning)
+
+session = AsyncSession(100)
 
 class DatabaseInterface:
     def __init__(self, skillsFilename="data/knownSkills.json", nonSkillsFilename="data/knownNonSkills.json"):
@@ -161,6 +164,15 @@ def apiCheck(skillname):
         return len(res) > 0 and res[0].lower() == skillname.lower()
     raise Exception(f"API Error: { res.get('message') }")
 
+async def asyncAPICheck(skillset):
+    responses = []
+    for skill in skillset:
+        responses.append(await session.get(f"https://api.promptapi.com/skills?q={skill}&count=1", headers={"apikey": '3fB6ppgySBe5rN3w2kA91f3qLRq8yINc'}))
+
+    for response in responses:
+        response = yield response
+        print(response)
+
 # Extract the text from the input document
 def fetchTextPDF(filename):
     '''
@@ -225,17 +237,20 @@ def extract_skills(corpus, filename):
     skills = db.getKnownSkills(filtered_tokens)
     unknowns = db.getUnknowns(filtered_tokens)
 
-    with alive_bar(len(unknowns), title="Parsing tokens...", bar="circles") as bar:
-        for token in unknowns:
-            if apiCheck(token):
-                skills.add(token)
-                db.recordSkill(token)
-            else: db.recordNotSkill(token)
+    session.run(asyncAPICheck, unknowns)
 
-            time.sleep(0.001)
-            bar()
 
-    extraction_package_skills = set([elem.lower() for elem in ResumeParser(filename).get_extracted_data()['skills']])
+    # with alive_bar(len(unknowns), title="Parsing tokens...", bar="circles") as bar:
+    #     for token in unknowns:
+    #         if apiCheck(token):
+    #             skills.add(token)
+    #             db.recordSkill(token)
+    #         else: db.recordNotSkill(token)
+
+    #         time.sleep(0.001)
+    #         bar()
+
+    # extraction_package_skills = set([elem.lower() for elem in ResumeParser(filename).get_extracted_data()['skills']])
 
     skills = skills.union(extraction_package_skills)
 
