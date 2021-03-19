@@ -84,7 +84,7 @@ class Header extends Component {
         </Grid>
         <Grid item xs={10}>
           <Toolbar style={{justifyContent: "center"}}>
-            <Typography variant="h3">
+            <Typography variant="h4">
               {selectedPage}
             </Typography>
           </Toolbar>
