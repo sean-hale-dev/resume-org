@@ -14,18 +14,6 @@ import click, docx2txt, nltk, requests
 # Surpress spacy warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
-# Placeeholder skills database
-SKILLS = None
-with open('data/skills.json', 'r') as f:
-    SKILLS = json.load(f)
-    f.close()
-
-if SKILLS == None:
-    raise ValueError("Unable to read in skills database")
-
-SKILLS = set(SKILLS['skills'])
-
-
 # Ensure that the needed NLTK packages are installed before running the parser
 def systemPrep():
     nltk.data.path.append(f'{os.getcwd()}/env/nltk_data')
@@ -57,20 +45,19 @@ def fetchTextPDF(filename):
         for page in PDFPage.create_pages(doc):
             interpreter.process_page(page)
 
-    return output_string.getvalue()
+    return str(output_string.getvalue())
 
 def fetchTextDocX(filename):
     return docx2txt.process(filename)
 
 # PLACEHOLDER FUNCTION -- Responsible for loading in json file of known skills and known non-skill words
 def openSkillsDB():
-    with open( 'data/positiveSkills.json', 'r' ) as f:
-        with open( 'data/nonSkills.json', 'r' ) as f2:
-            knownSkills = json.load(f)
-            nonSkills = json.load(f2)
+    with open( 'data/knownSkills.json', 'r' ) as f:
+        knownSkills = json.load(f)
+        f.close()
 
-            f2.close()
-
+    with open('data/knownNonSkills.json', 'r') as f:
+        nonSkills = json.load(f)
         f.close()
 
     return set(knownSkills), set(nonSkills) 
@@ -79,22 +66,19 @@ def openSkillsDB():
 def closeSkillsDB(knownSkills, nonSkills):
     knownSkills = list(knownSkills)
     nonSkills = list(nonSkills)
-    with open( 'data/positiveSkills.json', 'w' ) as f:
-        with open( 'data/nonSkills.json', 'w' ) as f2:
-            json.dump(knownSkills, f)
-            json.dump(nonSkills, f2)
 
-            f2.close()
-
+    with open('data/knownNonSkills.json', 'r') as f:
+        ns = json.load(f)
+        assert(ns != nonSkills)
         f.close()
 
-def checkIfInCorpus(word, obj):
-    branch = obj[word[0]]  
-    while not branch['leaf'] and branch[pos] < len(word):
-        branch = branch['branch']
+    with open( 'data/knownSkills.json', 'w' ) as f:
+        json.dump( knownSkills, f, indent=4 )
+        f.close()
 
-    return if word in branch['leaves']
-
+    with open('data/knownNonSkills.json', 'w') as f:
+        json.dump( nonSkills, f, indent=4 )
+        f.close()
 
 # Meat of the script, parses a string to extract resume skills
 def extract_skills(corpus, filename):
@@ -102,54 +86,56 @@ def extract_skills(corpus, filename):
     word_tokens = nltk.tokenize.word_tokenize(corpus)
 
     filtered_tokens = [ w for w in word_tokens if w not in stop_words ]
-    filtered_tokens = [ w for w in word_tokens if w.isalpha() ]
-
+    filtered_tokens = [ w.lower() for w in word_tokens if w.isalpha() ]
     filtered_tokens = set(filtered_tokens)
 
     bitri = list(map(' '.join, nltk.everygrams(filtered_tokens, 2, 3)))
+
     skills = set()
 
     ks, ns = openSkillsDB()
 
     with alive_bar(len(filtered_tokens), title="Parsing tokens...", bar="circles") as bar:
         for token in filtered_tokens:
-
-            bar()
-
-            if token.lower() in ks:
-                skills.add(token.lower())
-            elif token.lower() in ns:
+            path = ''
+            if token in ks: 
+                skills.add(token)
+                path = "Found in knowledge base"
+            elif token in ns: 
+                path = "Found in ns"
                 continue
-            elif token.lower() in SKILLS:
-                ks.add(token.lower())
-                skills.add(token.lower())
-            elif checkSkill(token.lower()):
-                ks.add(token.lower())
-                skills.add(token.lower())
+            elif checkSkill(token):
+                ks.add(token)
+                skills.add(token)
+                path = "Checking API"
             else:
-                ns.add(token.lower())
-            time.sleep(0.0001)
+                ns.add(token)
+                path = "None"
 
+            time.sleep(0.0001)
+            bar()
+            print(path)
 
     with alive_bar(len(bitri), title="Parsing bigrams and trigrams...", bar="circles") as bar:
-        for ngram in bitri:
-
-            bar()
-
-            if ngram.lower() in ks:
-                skills.add(ngram.lower())
-            elif ngram.lower() in ns:
+        for token in bitri:
+            path = ''
+            if token in ks: 
+                skills.add(token)
+                path = "Found in knowledge base"
+            elif token in ns: 
+                path = "Found in ns"
                 continue
-            elif ngram.lower() in SKILLS:
-                 ks.add(ngram.lower())
-                 skills.add(ngram.lower())
-            elif checkSkill(ngram.lower()):
-                ks.add(ngram.lower())
-                skills.add(ngram.lower())
+            elif checkSkill(token):
+                ks.add(token)
+                skills.add(token)
+                path = "Checking API"
             else:
-                ns.add(ngram.lower())
-            time.sleep(0.0001)
+                ns.add(token)
 
+            time.sleep(0.0001)
+            bar()
+            print(f"{path} -- {token}")
+                  
     extraction_package_skills = ResumeParser(filename).get_extracted_data()['skills']
     for s in extraction_package_skills:
         skills.add(s.lower())
@@ -178,6 +164,3 @@ def cli(resumefile):
 
     skills = extract_skills(text, resumefile) 
     
-    print(skills)
-    # pprint.pprint(skills)
-
