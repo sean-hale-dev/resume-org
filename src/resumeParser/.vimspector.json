@@ -1,0 +1,30 @@
+{
+  "configurations": {
+    "lldb-debug": {
+      "adapter": "vscode-cpptools",
+      "configuration": {
+        "request": "launch",
+        "program": "${workspaceRoot}/a.out",
+        "args": ["17", "test.txt"],
+        "cwd": "${workspaceRoot}",
+        "environment": [],
+        "stopAtEntry": true,
+        "MIMode": "lldb"
+      }
+    },
+    "python-debugpy": {
+      "adapter": "debugpy",
+      "configuration": {
+        "name": "<name>: Launch",
+        "type": "python",
+        "request": "launch",
+        "cwd": "${workspaceRoot}",
+        "python": "/Users/west/.local/share/virtualenvs/resumeParser-I_Elhcim/bin/python",
+        "stopOnEntry": true,
+        "console": "externalTerminal",
+        "debugOptions": [],
+        "program": "${workspaceRoot}/resumeParser.py"
+      }
+    }
+  }
+}

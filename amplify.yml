@@ -1,0 +1,19 @@
+version: 0.1
+frontend:
+  phases:
+    preBuild:
+        commands:
+            - cd src/client/resume-org
+            - yarn install
+    # IMPORTANT - Please verify your build commands
+    build:
+      commands:
+          - yarn run build
+  artifacts:
+    # IMPORTANT - Please verify your build output directory
+    baseDirectory: src/client/resume-org/build
+    files:
+      - '**/*'
+  cache:
+    paths: 
+        - src/client/resume-org/node_modules/**/*
