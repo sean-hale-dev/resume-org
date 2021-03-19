@@ -88,7 +88,7 @@ class DatabaseInterface:
             notSkill (string): The skill being saved
         '''
         
-        self.notSkills(notSkills)
+        self.notSkills.add(notSkill)
 
     def close(self):
         '''
@@ -210,6 +210,22 @@ def extract_skills(corpus):
             time.sleep(0.001)
             bar()
 
+    with alive_bar(len(filtered_tokens), title="Parsing bigrams and trigrams...", bar="circles") as bar:
+        for token in bitri:
+            isSkill = db.isSkill(token)
+
+            if isSkill == 1: skills.add(token)
+            elif isSkill == 0:
+                isSkill = apiCheck(token)
+                if isSkill:
+                    skills.add(token)
+                    db.recordSkill(token)
+                else: db.recordNotSkill(token)
+
+            time.sleep(0.001)
+            bar()
+
+
     db.close()
 
     return skills
@@ -233,4 +249,8 @@ def cli(resumefile):
         return
 
     skills = extract_skills(text) 
+
+
+if __name__ == "__main__":
+    cli("test_resumes/Sean College Resume.pdf")
     
