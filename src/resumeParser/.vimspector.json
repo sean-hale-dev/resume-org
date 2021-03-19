@@ -19,7 +19,7 @@
         "type": "python",
         "request": "launch",
         "cwd": "${workspaceRoot}",
-        "python": "/usr/local/bin/python3",
+        "python": "/Users/west/.local/share/virtualenvs/resumeParser-I_Elhcim/bin/python",
         "stopOnEntry": true,
         "console": "externalTerminal",
         "debugOptions": [],

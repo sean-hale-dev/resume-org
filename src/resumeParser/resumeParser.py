@@ -70,6 +70,31 @@ class DatabaseInterface:
 
         return 0
 
+    def getUnknowns(self, tokenSet):
+        '''
+        Calculates the difference between the two set
+
+        Parameters:
+            tokenSet (set (string)): a set of potential skills
+
+        Returns:
+            set (string): All unknown skills
+        '''
+        return tokenSet.difference(self.skills).difference(self.notSkills)
+
+    def getKnownSkills(self, tokenSet):
+        '''
+        Calculates the tokens in the set which are known skills
+
+        Parameters:
+            tokenSet (set(string)): a set of potential skills
+
+        Returns:
+            set (string): All known skills in this set
+        '''
+        return self.skills.intersection(tokenSet)
+
+
     def recordSkill(self, skill):
         '''
         Saves the skill into the self.skills
@@ -172,12 +197,13 @@ def fetchTextDocX(filename):
 
     return docx2txt.process(filename)
 
-def extract_skills(corpus):
+def extract_skills(corpus, filename):
     '''
     Parses a string to extract resume skills
 
     Parameters:
         corpus (string): The extracted text of a resume
+        filename (string): The filepath to the resume being parsed
 
     Returns:
         skills (set): The extracted skills of the corpus
@@ -187,44 +213,34 @@ def extract_skills(corpus):
 
     filtered_tokens = [ w for w in word_tokens if w not in stop_words ]
     filtered_tokens = [ w.lower() for w in word_tokens if w.isalpha() ]
+
+    bitri = nltk.everygrams(filtered_tokens, 2, 3)
     filtered_tokens = set(filtered_tokens)
-
-    bitri = set(map(' '.join, nltk.everygrams(filtered_tokens, 2, 3)))
-
-    skills = set()
+    for gram in bitri:
+        gram = ' '.join(gram)
+        gram = gram.lower()
+        filtered_tokens.add(gram)
 
     db = DatabaseInterface()
+    skills = db.getKnownSkills(filtered_tokens)
+    unknowns = db.getUnknowns(filtered_tokens)
 
-    with alive_bar(len(filtered_tokens), title="Parsing tokens...", bar="circles") as bar:
-        for token in filtered_tokens:
-            isSkill = db.isSkill(token)
-
-            if isSkill == 1: skills.add(token)
-            elif isSkill == 0:
-                isSkill = apiCheck(token)
-                if isSkill:
-                    skills.add(token)
-                    db.recordSkill(token)
-                else: db.recordNotSkill(token)
+    with alive_bar(len(unknowns), title="Parsing tokens...", bar="circles") as bar:
+        for token in unknowns:
+            if apiCheck(token):
+                skills.add(token)
+                db.recordSkill(token)
+            else: db.recordNotSkill(token)
 
             time.sleep(0.001)
             bar()
 
-    with alive_bar(len(filtered_tokens), title="Parsing bigrams and trigrams...", bar="circles") as bar:
-        for token in bitri:
-            isSkill = db.isSkill(token)
+    extraction_package_skills = set([elem.lower() for elem in ResumeParser(filename).get_extracted_data()['skills']])
 
-            if isSkill == 1: skills.add(token)
-            elif isSkill == 0:
-                isSkill = apiCheck(token)
-                if isSkill:
-                    skills.add(token)
-                    db.recordSkill(token)
-                else: db.recordNotSkill(token)
+    skills = skills.union(extraction_package_skills)
 
-            time.sleep(0.001)
-            bar()
-
+    for s in extraction_package_skills:
+        db.recordSkill(s)
 
     db.close()
 
@@ -234,6 +250,14 @@ def extract_skills(corpus):
 @click.command()
 @click.argument('resumeFile')
 def cli(resumefile):
+    '''
+    Entry point for the script, handles the read in and file extension detection for the input resume file.
+    
+    This is called via the resumeParser cli 
+
+    Parameters:
+        resumefile (string): Path to the input resume
+    '''
     resumefileExt = resumefile.split('.')[-1].lower()
 
     text = None
@@ -248,9 +272,7 @@ def cli(resumefile):
         click.echo(f"ERROR: Something went wrong, we're unable to extract your resume data")
         return
 
-    skills = extract_skills(text) 
+    skills = extract_skills(text, resumefile) 
 
+    print(f"Finished tokenization and parsing -- Detected {len(skills)} skills:\n{skills}")
 
-if __name__ == "__main__":
-    cli("test_resumes/Sean College Resume.pdf")
-    
