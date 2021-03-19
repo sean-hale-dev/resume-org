@@ -1,3 +1,6 @@
 src/resumeParser/test_resumes
 *.DS_Store
 *.egg-info
+*yarn*
+*package-lock.json
+*node_modules
