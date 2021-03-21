@@ -30,7 +30,7 @@ class Resume extends Component {
         <Card className={classes.resumeUploadCard}>
           <DropzoneArea
             dropzoneText="Upload Resume"
-            acceptedFiles={[".pdf", ".doc", "docx"]}
+            acceptedFiles={[".pdf", ".doc", ".docx"]}
             dropzoneParagraphClass={classes.dropzoneText}
             filesLimit={1}
             showPreviews={true}
