@@ -41,7 +41,7 @@ class Resume extends Component {
       console.log("Upload Success- Will post the file: ", this.state.resumeFile);
       var formData = new FormData();
       formData.append("resume", this.state.resumeFile);
-      axios.post(`http://localhost:8080/resume-upload`, formData, {
+      axios.post(`http://${window.location.hostname}:8080/resume-upload`, formData, {
         headers: {
           "Content-Type": "multipart/form-data"
         }
