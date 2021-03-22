@@ -1,17 +1,50 @@
 const express = require('express');
 const app = express();
-const port = 3000;
+const port = 8080;
+const bodyParser = require('body-parser');
+const fs = require('fs');
+const formidable = require('formidable');
+
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+
+app.use(bodyParser.urlencoded({extended: false, limit: "10mb"}));
+app.use(bodyParser.json({limit: "10mb"}));
 
 app.post('/resume-upload', (req, res) => {
-  // filepath : specifies the document's filepath
   
+  var form = new formidable.IncomingForm();
+  form.parse(req);
+  
+  form.on("fileBegin", function(name, file) {
+    file.path = `${__dirname}/resumes/${file.name}`;
+  });
+  
+  form.on("file", function (name, file) {
+    console.log(`File uploaded - "${file.path}"`);
+    parseResume(res, [file.path], true);
+  });
+});
+
+app.listen(port, () => {
+	console.log(`Listening on *:${port}`);
+});
+
+function parseResume(res, args, deleteFile) {
   var spawn = require("child_process").spawn;
-  var process = spawn('resumeParser', [req.query.filepath]);
+  var process = spawn('resumeParser', args);
   
+  console.log("Resume being parsed - awaiting results");
   process.stdout.on('data', function(data) {
-    console.log(`data.toString() - ${data.toString()}`);
     if(data.toString().charCodeAt(0) != 27)
     {
+      if(deleteFile) {
+        console.log(`Now deleting - "${args[0]}"`)
+        fs.unlinkSync(args[0]);
+      }
       var skills_json = data.toString().split(" skills:\n")[1];
       
       // make the string valid JSON
@@ -23,8 +56,4 @@ app.post('/resume-upload', (req, res) => {
       res.json(JSON.parse(skills_json));
     }
   });
-});
-
-app.listen(port, () => {
-	console.log(`Listening on *:${port}`);
-});
+};
