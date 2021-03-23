@@ -4,8 +4,8 @@ from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfparser import PDFParser
-from io import StringIO
-from alive_progress import alive_bar
+from io import StringIO 
+from alive_progress import alive_bar 
 from pyresparser import ResumeParser
 
 import json, os, pprint, time, warnings
@@ -16,6 +16,8 @@ from requests_threads import AsyncSession
 warnings.filterwarnings("ignore", category=UserWarning)
 
 session = AsyncSession(100)
+
+UNKNOWNS = None
 
 class DatabaseInterface:
     def __init__(self, skillsFilename="data/knownSkills.json", nonSkillsFilename="data/knownNonSkills.json"):
@@ -118,6 +120,24 @@ class DatabaseInterface:
         
         self.notSkills.add(notSkill)
 
+    def recordSkills(self, skills):
+        '''
+        Saves the skills into self.skills
+
+        Parameters:
+            skills (set(string)): The set of skills being added
+        '''
+        self.skills = self.skills.union(skills)
+
+    def recordNotSkills(self, notSkills):
+        '''
+        Saves the skills into self.notSkills
+
+        Parameters:
+            notSkills (set(string)): The set of not skills being added
+        '''
+        self.notSkills = self.notSkills.union(notSkills)
+
     def close(self):
         '''
         Saves the internal data of this class
@@ -128,8 +148,6 @@ class DatabaseInterface:
 
         self._save_file(self.skillsFName, self.skills)
         self._save_file(self.notSkillsFName, self.notSkills)
-
-
 
 # Ensure that the needed NLTK packages are installed before running the parser
 def systemPrep():
@@ -142,36 +160,35 @@ def systemPrep():
     nltk.download('maxent_ne_chunker')
     nltk.download('words')
 
-def apiCheck(skillname):
+async def asyncAPICheck():
     '''
-    Call skillAPI to check if a string is a skill recognized by the API
-
-    Parameters:
-        skillname (string): Skill being checked by the API
-
-    Returns:
-        Boolean: 
-            True: The API recognized the word as a skill
-            False: The API did not recognize the word as a skill
-
+    Use the UNKNOWNS global set as a set of skills to lookup via the promptapi Skills API
+    
+    This program will write confirmed skills back into UNKNOWNS global, excluding non-skills
     '''
-    req_url = f'https://api.promptapi.com/skills?q={skillname}&count=1'
-    headers = { "apikey": '3fB6ppgySBe5rN3w2kA91f3qLRq8yINc' }
-    response = requests.request('GET', req_url, headers=headers)
-    res = response.json()
+    global UNKNOWNS
+    skillset = UNKNOWNS
+    deferResponses = {}
+    responses = {}
 
-    if response.status_code == 200:
-        return len(res) > 0 and res[0].lower() == skillname.lower()
-    raise Exception(f"API Error: { res.get('message') }")
+    with alive_bar(len(skillset), title="Looking up tokens...", bar="circles") as bar:
+        for skill in skillset:
+            deferResponses[skill] = session.get(f"https://api.promptapi.com/skills?q={skill}&count=1", headers={"apikey": '3fB6ppgySBe5rN3w2kA91f3qLRq8yINc'})
 
-async def asyncAPICheck(skillset):
-    responses = []
-    for skill in skillset:
-        responses.append(await session.get(f"https://api.promptapi.com/skills?q={skill}&count=1", headers={"apikey": '3fB6ppgySBe5rN3w2kA91f3qLRq8yINc'}))
+        for skill, resp in deferResponses.items():
+            response = await resp 
+            if response.status_code == 200: responses[skill] = response.json()
+            else: responses[skill] = None
+            bar()
 
-    for response in responses:
-        response = yield response
-        print(response)
+    ret = set()
+    for skill, response in responses.items():
+        if not response: continue
+
+        if len(response) > 0 and response[0].lower() == skill.lower(): ret.add(skill)
+
+    UNKNOWNS = ret
+
 
 # Extract the text from the input document
 def fetchTextPDF(filename):
@@ -220,6 +237,8 @@ def extract_skills(corpus, filename):
     Returns:
         skills (set): The extracted skills of the corpus
     '''
+    global UNKNOWNS
+
     stop_words = set(nltk.corpus.stopwords.words('english'))
     word_tokens = nltk.tokenize.word_tokenize(corpus)
 
@@ -235,27 +254,22 @@ def extract_skills(corpus, filename):
 
     db = DatabaseInterface()
     skills = db.getKnownSkills(filtered_tokens)
-    unknowns = db.getUnknowns(filtered_tokens)
+    unknown_skills = db.getUnknowns(filtered_tokens)
+    UNKNOWNS = unknown_skills.copy()
 
-    session.run(asyncAPICheck, unknowns)
+    try:
+        session.run(asyncAPICheck)
+    except SystemExit:
+        pass
 
+    db.recordSkills(UNKNOWNS)
+    db.recordNotSkills(unknown_skills.difference(UNKNOWNS))
 
-    # with alive_bar(len(unknowns), title="Parsing tokens...", bar="circles") as bar:
-    #     for token in unknowns:
-    #         if apiCheck(token):
-    #             skills.add(token)
-    #             db.recordSkill(token)
-    #         else: db.recordNotSkill(token)
-
-    #         time.sleep(0.001)
-    #         bar()
-
-    # extraction_package_skills = set([elem.lower() for elem in ResumeParser(filename).get_extracted_data()['skills']])
+    extraction_package_skills = set([elem.lower() for elem in ResumeParser(filename).get_extracted_data()['skills']])
+    db.recordSkills(extraction_package_skills)
 
     skills = skills.union(extraction_package_skills)
-
-    for s in extraction_package_skills:
-        db.recordSkill(s)
+    skills = skills.union(UNKNOWNS)
 
     db.close()
 
