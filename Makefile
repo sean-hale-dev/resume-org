@@ -7,24 +7,22 @@ setup:
 	pip3 install pipenv
 
 install_parser:
-	setup \
-	cd src/resumeParser \
-	pipenv install \
-	pipenv run pip3 install --editable . \
-	pipenv run resumeParser foobar --install \
-	cd ../../
+	make setup
+	cd src/resumeParser && pipenv install && pipenv run pip3 install --editable . && pipenv run resumeParser foobar --install
 
 install_frontend:
-	cd src/client/resume-org \
-	$(NODEPM) install \
-	cd ../../../
+	cd src/client/resume-org && $(NODEPM) install
 
 install_backend:
-	cd src/server \
-	npm install \
-	cd ../../
+	cd src/server && $(NODEPM) install
 
 install:
-	install_parser install_frontend install_backend
+	make install_parser
+	make install_frontend
+	make install_backend
 
+frontend_dev:
+	cd src/client/resume-org && $(NODEPM) start
 
+backend_dev:
+	cd src/server && $(NODEPM) start
