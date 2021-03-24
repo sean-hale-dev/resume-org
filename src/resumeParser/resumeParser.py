@@ -9,47 +9,55 @@ from alive_progress import alive_bar
 from pyresparser import ResumeParser
 
 import json, os, pprint, time, warnings
-import click, docx2txt, nltk, requests
+import click, docx2txt, nltk, requests, pymongo
 
 # Surpress spacy warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
 class DatabaseInterface:
     def __init__(self, skillsFilename="data/knownSkills.json", nonSkillsFilename="data/knownNonSkills.json"):
-        self.skillsFName = skillsFilename
-        self.notSkillsFName = nonSkillsFilename
+        mongoURI = os.environ["MONGO_URI"]
+        self.dbClient = pymongo.MongoClient(mongoURI)
+        self.skillsCollection = self.dbClient['resume_org']['resume_skills']
 
-        self.skills = set(self._load_file(self.skillsFName))
-        self.notSkills = set(self._load_file(self.notSkillsFName))
+        self.skillsDocName = "skills"
+        self.notSkillsDocName = "non_skills"
 
-    def _load_file(self, filename):
+        self.skills = set(self._load_document(self.skillsDocName))
+        self.notSkills = set(self._load_document(self.notSkillsDocName))
+        
+    def _load_document(self, documentKey):
         '''
-        Loads in a JSON object from a file
+        Loads in a BSON object from the MongoDB database
 
         Parameters:
-            filename (string): The name of the file to be loaded
+            documentKey (string): The name of the document from the 'resume_skills' collection to load
 
         Returns:
-            List/Dict: The parsed JSON obj into python struct
+            List/Dict: The parsed BSON obj into python struct
         '''
-        with open(filename, 'r') as f:
-            ret = json.load(f)
-            f.close()
-        return ret
+        retDoc = self.skillsCollection.find_one({"name": documentKey})
+
+        if not retDoc:
+            self.skillsCollection.insert_one({"name": documentKey, "lookup": ["$"]})
+            return list()
+
+        return retDoc['lookup']
     
-    def _save_file(self, filename, obj):
+    def _save_document(self, documentKey, obj):
         '''
-        Serializes this class into a file essentially
+        Serializes this class into the MongoDB database
 
         Parameters:
-            filename (string): The name of the file to be written 
-
-        Returns:
-            List/Dict: The parsed JSON obj into python struct
+            documentKey (string): The name of the file to be written 
+            obj (list): The object being recorded into the database
         '''
+        retDoc = self.skillsCollection.find_one({"name": documentKey})
 
-        with open(filename, 'w') as f:
-            json.dump(obj, f, indent=4)
+        if not retDoc:
+            self.skillsCollection.insert_one({"name": documentKey, "lookup": ["$"]})
+        else:
+            self.skillsCollection.update_one({"name": documentKey}, {"$set": {"lookup": obj}})
 
     def isSkill(self, skill):
         '''
@@ -123,8 +131,10 @@ class DatabaseInterface:
         self.skills = list(self.skills)
         self.notSkills = list(self.notSkills)
 
-        self._save_file(self.skillsFName, self.skills)
-        self._save_file(self.notSkillsFName, self.notSkills)
+        self._save_document(self.skillsDocName, self.skills)
+        self._save_document(self.notSkillsDocName, self.notSkills)
+
+        self.dbClient.close()
 
 
 
