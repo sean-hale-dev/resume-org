@@ -15,6 +15,7 @@ numpy = "*"
 spacy = "==2.3.5"
 pyresparser = "*"
 resumeparser = {editable = true, path = "."}
+pymongo = "*"
 
 [dev-packages]
 neovim = "*"

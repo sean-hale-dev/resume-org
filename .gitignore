@@ -6,3 +6,4 @@ src/resumeParser/dist
 *yarn*
 *package-lock.json
 *node_modules
+.env
