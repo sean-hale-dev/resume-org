@@ -1,4 +1,6 @@
 src/resumeParser/test_resumes
+src/resumeParser/build
+src/resumeParser/dist
 *.DS_Store
 *.egg-info
 *yarn*
