@@ -8,7 +8,7 @@ setup:
 
 install_parser:
 	make setup
-	cd src/resumeParser && pipenv install && pipenv run pip3 install --editable . && pipenv run resumeParser foobar --install
+	cd src/resumeParser && export SYSTEM_VERSION_COMPAT=1 && pipenv install && pipenv run pip3 install --editable . && pipenv run resumeParser foobar --install
 
 install_frontend:
 	cd src/client/resume-org && $(NODEPM) install
