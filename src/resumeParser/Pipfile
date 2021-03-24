@@ -5,11 +5,16 @@ name = "pypi"
 
 [packages]
 click = "*"
-docx2txt = "*"
-alive-progress = "*"
 "pdfminer.six" = "*"
 nltk = "*"
 requests = "*"
+docx2txt = "*"
+alive-progress = "*"
+requests-threads = "*"
+numpy = "*"
+spacy = "==2.3.5"
+pyresparser = "*"
+resumeparser = {editable = true, path = "."}
 
 [dev-packages]
 neovim = "*"
