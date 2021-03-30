@@ -19,7 +19,7 @@ mongo_client.connect(process.env.MONGO_URI, function(err, database) {
     console.log(result);
   });
   
-  db.collection("skill_assoc").insertOne({python: [], java: [], cpp: []}, function(err, res) {
+  db.collection("skill_assoc").insertOne({name: "python", resumes: []}, function(err, res) {
     if (err) throw err;
     console.log(`skills inserted`);
   });
@@ -48,7 +48,15 @@ mongo_client.connect(process.env.MONGO_URI, function(err, database) {
   
     form.on('file', function (name, file) {
       console.log(`File uploaded - "${file.path}"`);
-      parseResume(res, [file.path], db, true);
+      
+      var prom = dbGetKeys(db);
+      prom.then(result => {
+        console.log("Get keys - promise done:");
+        allCurrentKeys = result.map(doc => doc.name);
+        console.log(allCurrentKeys);
+        parseResume(res, [file.path], db, true, allCurrentKeys);
+      });
+      
     });
   });
   
@@ -65,7 +73,16 @@ function dbUpload(db, file_data, skills_json) {
   });
 }
 
-function parseResume(res, args, db, deleteFile) {
+function dbGetKeys(db) {
+  return new Promise((resolve, reject) => {
+    db.collection("skill_assoc").find("name").toArray( function(err, result) {
+     if (err) return reject(err);
+     return resolve(result);
+   })
+ });
+}
+
+function parseResume(res, args, db, deleteFile, allCurrentKeys) {
   var process = child_process.spawn('resumeParser', args);
 
   console.log('Resume being parsed - awaiting results');
