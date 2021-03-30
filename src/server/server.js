@@ -1,3 +1,4 @@
+const dotenv = require('dotenv').config();
 const express = require('express');
 const app = express();
 const port = 8080;
@@ -6,36 +7,46 @@ const fs = require('fs');
 const formidable = require('formidable');
 const child_process = require('child_process');
 const path = require('path');
+const mongo_client = require('mongodb');
 
-app.use(function (req, res, next) {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header(
-    'Access-Control-Allow-Headers',
-    'Origin, X-Requested-With, Content-Type, Accept'
-  );
-  next();
-});
-
-app.use(bodyParser.urlencoded({ extended: false, limit: '10mb' }));
-app.use(bodyParser.json({ limit: '10mb' }));
-
-app.post('/resume-upload', (req, res) => {
-  var form = new formidable.IncomingForm();
-  form.parse(req);
-
-  form.on('fileBegin', function (name, file) {
-    file.path = `${__dirname}/resumes/${file.name}`;
+mongo_client.connect(process.env.MONGO_SERVER_URI, function(err, db) {
+  if (err) throw err;
+  
+  var dbo = db.db("resume_org");
+  
+  console.log("Connected with MongoDB!");
+  
+  app.use(function (req, res, next) {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header(
+      'Access-Control-Allow-Headers',
+      'Origin, X-Requested-With, Content-Type, Accept'
+    );
+    next();
   });
-
-  form.on('file', function (name, file) {
-    console.log(`File uploaded - "${file.path}"`);
-    parseResume(res, [file.path], true);
+  
+  app.use(bodyParser.urlencoded({ extended: false, limit: '10mb' }));
+  app.use(bodyParser.json({ limit: '10mb' }));
+  
+  app.post('/resume-upload', (req, res) => {
+    var form = new formidable.IncomingForm();
+    form.parse(req);
+  
+    form.on('fileBegin', function (name, file) {
+      file.path = `${__dirname}/resumes/${file.name}`;
+    });
+  
+    form.on('file', function (name, file) {
+      console.log(`File uploaded - "${file.path}"`);
+      parseResume(res, [file.path], true);
+    });
+  });
+  
+  app.listen(port, () => {
+    console.log(`Listening on *:${port}`);
   });
 });
 
-app.listen(port, () => {
-  console.log(`Listening on *:${port}`);
-});
 
 function parseResume(res, args, deleteFile) {
   var process = child_process.spawn('resumeParser', args);

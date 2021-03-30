@@ -1,0 +1,25 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+click = "*"
+"pdfminer.six" = "*"
+nltk = "*"
+requests = "*"
+docx2txt = "*"
+alive-progress = "*"
+requests-threads = "*"
+numpy = "*"
+spacy = "==2.3.5"
+pyresparser = "*"
+resumeparser = {editable = true, path = "."}
+pymongo = "*"
+
+[dev-packages]
+neovim = "*"
+jedi = "*"
+
+[requires]
+python_version = "3.9"
