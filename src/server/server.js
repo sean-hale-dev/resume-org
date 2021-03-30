@@ -9,11 +9,21 @@ const child_process = require('child_process');
 const path = require('path');
 const mongo_client = require('mongodb');
 
-mongo_client.connect(process.env.MONGO_SERVER_URI, function(err, db) {
+mongo_client.connect(process.env.MONGO_URI, function(err, database) {
   if (err) throw err;
   
-  var dbo = db.db("resume_org");
+  var db = database.db("resume_org");
+  /*
+  db.collection("resumes").find({}).toArray(function(err, result) {
+    if (err) throw err;
+    console.log(result);
+  });
   
+  db.collection("skill_assoc").insertOne({python: [], java: [], cpp: []}, function(err, res) {
+    if (err) throw err;
+    console.log(`skills inserted`);
+  });
+  */
   console.log("Connected with MongoDB!");
   
   app.use(function (req, res, next) {
@@ -38,7 +48,7 @@ mongo_client.connect(process.env.MONGO_SERVER_URI, function(err, db) {
   
     form.on('file', function (name, file) {
       console.log(`File uploaded - "${file.path}"`);
-      parseResume(res, [file.path], true);
+      parseResume(res, [file.path], db, true);
     });
   });
   
@@ -47,17 +57,20 @@ mongo_client.connect(process.env.MONGO_SERVER_URI, function(err, db) {
   });
 });
 
+function dbUpload(db, file_data, skills_json) {
+  var db_upload = { resume: file_data, skills: skills_json.skills};
+  db.collection("resumes").insertOne(db_upload, function(err, res) {
+    if (err) throw err;
+    console.log(`file inserted`);
+  });
+}
 
-function parseResume(res, args, deleteFile) {
+function parseResume(res, args, db, deleteFile) {
   var process = child_process.spawn('resumeParser', args);
 
   console.log('Resume being parsed - awaiting results');
   process.stdout.on('data', function (data) {
     if (data.toString().charCodeAt(0) != 27) {
-      if (deleteFile) {
-        console.log(`Now deleting - "${args[0]}"`);
-        fs.unlinkSync(args[0]);
-      }
       var skills_json = data.toString().split(' skills:\n')[1];
 
       // make the string valid JSON
@@ -71,8 +84,20 @@ function parseResume(res, args, deleteFile) {
       );
       skills_json = skills_json.replace(/'/g, '"');
 
-      console.log(skills_json);
-      res.json(JSON.parse(skills_json));
+      console.log("skills_json: " + skills_json);
+      
+      skills_json = JSON.parse(skills_json);
+      res.json(skills_json);
+      
+      var file_data = fs.readFileSync(args[0]);
+      //console.log(file_data);
+      //fs.writeFileSync(`${__dirname}/resumes/test-here.docx`, file_data);
+      dbUpload(db, file_data, skills_json);
+      
+      if (deleteFile) {
+        console.log(`Now deleting - "${args[0]}"`);
+        fs.unlinkSync(args[0]);
+      }
     }
   });
 }
