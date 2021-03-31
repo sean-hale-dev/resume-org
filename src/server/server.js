@@ -13,17 +13,7 @@ mongo_client.connect(process.env.MONGO_URI, function(err, database) {
   if (err) throw err;
   
   var db = database.db("resume_org");
-  /*
-  db.collection("resumes").find({}).toArray(function(err, result) {
-    if (err) throw err;
-    console.log(result);
-  });
   
-  db.collection("skill_assoc").insertOne({name: "python", resumes: []}, function(err, res) {
-    if (err) throw err;
-    console.log(`skills inserted`);
-  });
-  */
   console.log("Connected with MongoDB!");
   
   app.use(function (req, res, next) {
@@ -67,19 +57,65 @@ mongo_client.connect(process.env.MONGO_URI, function(err, database) {
 
 function dbUpload(db, file_data, skills_json) {
   var db_upload = { resume: file_data, skills: skills_json.skills};
-  db.collection("resumes").insertOne(db_upload, function(err, res) {
-    if (err) throw err;
-    console.log(`file inserted`);
-  });
+  return new Promise((resolve, reject) => {
+    db.collection("resumes").insertOne(db_upload, function(err, res) {
+      if (err) return reject(err);
+      console.log(`File inserted into database`);
+      console.log(`res.insertedId: ${res.insertedId}`);
+      return resolve(res.insertedId);
+    })
+ });
 }
 
 function dbGetKeys(db) {
   return new Promise((resolve, reject) => {
     db.collection("skill_assoc").find("name").toArray( function(err, result) {
-     if (err) return reject(err);
-     return resolve(result);
-   })
- });
+      if (err) return reject(err);
+      return resolve(result);
+    })
+  });
+}
+
+function insertNewSkills(db, allCurrentKeys, skills_json) {
+  console.log("inserting keys here");
+  var newSkills = [];
+  for(key in skills_json.skills) {
+    console.log(skills_json.skills[key]);
+    if(!allCurrentKeys.includes(skills_json.skills[key])) {
+      newSkills.push({name: skills_json.skills[key], resumes: []});
+    }
+  }
+  if(newSkills.length > 0) {
+    console.log("about to insert all the skills below:");
+    console.log(newSkills);
+    
+    return new Promise((resolve, reject) => {
+      db.collection("skill_assoc").insertMany(newSkills, function(err, res) {
+        if (err) return reject(err);
+        console.log(`All new skills inserted`);
+        return resolve(res)
+      });
+    });
+  }
+  else {
+    console.log("No skills to insert");
+    return new Promise((resolve, reject) => {
+      resolve();
+    });
+  }
+}
+
+function updateSkillAssoc(db, skills_json, resume_id) {
+  console.log("updateMany happening");
+  db.collection("skill_assoc").updateMany({
+    name: {
+      $in: skills_json.skills
+    }
+  }, {
+    $push: {
+      resumes: resume_id
+    }
+  });
 }
 
 function parseResume(res, args, db, deleteFile, allCurrentKeys) {
@@ -96,20 +132,25 @@ function parseResume(res, args, db, deleteFile, allCurrentKeys) {
         '"skills": [',
         skills_json.slice(1),
       ].join('');
-      skills_json = [skills_json.slice(0, -2), ']', skills_json.slice(-2)].join(
-        ''
-      );
+      skills_json = [skills_json.slice(0, -2), ']', skills_json.slice(-2)].join('');
       skills_json = skills_json.replace(/'/g, '"');
 
       console.log("skills_json: " + skills_json);
       
       skills_json = JSON.parse(skills_json);
+      
+      // send the JSON of skills back to the client
       res.json(skills_json);
       
+      // upload file and skills to database
       var file_data = fs.readFileSync(args[0]);
-      //console.log(file_data);
-      //fs.writeFileSync(`${__dirname}/resumes/test-here.docx`, file_data);
-      dbUpload(db, file_data, skills_json);
+      dbUpload(db, file_data, skills_json).then(resume_id => {
+        console.log(resume_id);
+        insertNewSkills(db, allCurrentKeys, skills_json).then(function() {
+          console.log("Insert skills promise resolved - about to update skills")
+          updateSkillAssoc(db, skills_json, resume_id);
+        });
+      })
       
       if (deleteFile) {
         console.log(`Now deleting - "${args[0]}"`);
