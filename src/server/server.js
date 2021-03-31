@@ -5,7 +5,6 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const formidable = require('formidable');
 const child_process = require('child_process');
-const path = require('path');
 
 app.use(function (req, res, next) {
   res.header('Access-Control-Allow-Origin', '*');
