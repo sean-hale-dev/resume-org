@@ -39,15 +39,19 @@ mongo_client.connect(process.env.MONGO_URI, function(err, database) {
     form.on('file', function (name, file) {
       console.log(`File uploaded - "${file.path}"`);
       
-      var prom = dbGetKeys(db);
-      prom.then(result => {
+      dbGetKeys(db).then(result => {
         console.log("Get keys - promise done:");
         allCurrentKeys = result.map(doc => doc.name);
         console.log(allCurrentKeys);
-        parseResume(res, [file.path], db, true, allCurrentKeys);
+        parseResume(res, [file.path], db, true, allCurrentKeys, file.type);
       });
       
     });
+  });
+  
+  app.get('/resume-download', (req, res) => {
+    // file path hard-coded for testing purposes
+    sendResumeDownloadToClient(`${__dirname}/resumes/testfilelocation.docx`, res);
   });
   
   app.listen(port, () => {
@@ -55,8 +59,8 @@ mongo_client.connect(process.env.MONGO_URI, function(err, database) {
   });
 });
 
-function dbUpload(db, file_data, skills_json) {
-  var db_upload = { resume: file_data, skills: skills_json.skills};
+function dbUpload(db, file_data, skills_json, file_type) {
+  var db_upload = { resume: file_data, type: file_type, skills: skills_json.skills};
   return new Promise((resolve, reject) => {
     db.collection("resumes").insertOne(db_upload, function(err, res) {
       if (err) return reject(err);
@@ -80,7 +84,7 @@ function insertNewSkills(db, allCurrentKeys, skills_json) {
   console.log("inserting keys here");
   var newSkills = [];
   for(key in skills_json.skills) {
-    console.log(skills_json.skills[key]);
+    // console.log(skills_json.skills[key]);
     if(!allCurrentKeys.includes(skills_json.skills[key])) {
       newSkills.push({name: skills_json.skills[key], resumes: []});
     }
@@ -105,6 +109,12 @@ function insertNewSkills(db, allCurrentKeys, skills_json) {
   }
 }
 
+function getExtFromType(type) {
+  if(type == "application/pdf") return ".pdf";
+  if(type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document") return ".docx";
+  return null;
+}
+
 function updateSkillAssoc(db, skills_json, resume_id) {
   console.log("updateMany happening");
   db.collection("skill_assoc").updateMany({
@@ -118,11 +128,36 @@ function updateSkillAssoc(db, skills_json, resume_id) {
   });
 }
 
-function parseResume(res, args, db, deleteFile, allCurrentKeys) {
+function getResume(db, resume_id) {
+  return new Promise((resolve, reject) => {
+    db.collection("resumes").find({_id: resume_id}).toArray( function(err, result) {
+      if (err) return reject(err);
+      if (result.length == 0) return reject(err);
+      return resolve(result[0]);
+    })
+  });
+}
+
+function downloadResumeToServer(db, resume_binary, file_ext) {
+  console.log("About to write the pulled resume now");
+  fs.writeFileSync(`${__dirname}/resumes/testfilelocation${file_ext}`, Buffer.from(resume_binary.toString("binary"), "binary"), "binary");
+}
+
+function sendResumeDownloadToClient(file_path, res) {
+  res.download(file_path, (err) => {
+    console.log(err);
+  });
+}
+
+function parseResume(res, args, db, deleteFile, allCurrentKeys, file_type) {
   var process = child_process.spawn('resumeParser', args);
 
   console.log('Resume being parsed - awaiting results');
   process.stdout.on('data', function (data) {
+    console.log(`data.toString(): ${data.toString()}`);
+    if(!(data.toString().includes(" 0 skills"))) {
+      res.send("No skills were found in the uploaded resume. Resume not saved.");
+    }
     if (data.toString().charCodeAt(0) != 27) {
       var skills_json = data.toString().split(' skills:\n')[1];
 
@@ -144,13 +179,27 @@ function parseResume(res, args, db, deleteFile, allCurrentKeys) {
       
       // upload file and skills to database
       var file_data = fs.readFileSync(args[0]);
-      dbUpload(db, file_data, skills_json).then(resume_id => {
+      dbUpload(db, file_data, skills_json, file_type).then(resume_id => {
         console.log(resume_id);
+        
         insertNewSkills(db, allCurrentKeys, skills_json).then(function() {
           console.log("Insert skills promise resolved - about to update skills")
           updateSkillAssoc(db, skills_json, resume_id);
+        }).catch(err => {
+          console.log(err);
         });
-      })
+        
+        return resume_id;
+      }).then(resume_id => {
+        getResume(db, resume_id).then(resume => {
+          downloadResumeToServer(db, resume.resume, getExtFromType(resume.type));
+          console.log(`File redownloaded to server from database`);
+          
+          // sendResumeDownloadToClient(`${__dirname}/resumes/testfilelocation${getExtFromType(resume.type)}`, res);
+        }).catch(() => {
+          console.log(`No resume found with _id = ${resume_id}`)
+        });
+      });
       
       if (deleteFile) {
         console.log(`Now deleting - "${args[0]}"`);
