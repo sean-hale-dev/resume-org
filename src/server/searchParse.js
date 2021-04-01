@@ -1,49 +1,35 @@
 function parseString(group) {
   var searchParams = {
-    and: [],
-    or: [],
-    xor: [],
+    operation: '',
+    containsMacros: false,
+    components: [],
   };
 
-  let andSelect = /^([\w|! |!][\w +-]+[\w+-])(?=\s?&)|(?<=&\s)([\w|(! )|!][\w +-]+[\w+-])|(?<=&)([\w!][\w +-]+[\w+-])/gi;
-  let orSelect = /^([\w|! |!][\w +-]+[\w+-])(?=\s?\|)|(?<=\|\s)([\w|(! )|!][\w +-]+[\w+-])|(?<=\|)([\w!][\w +-]+[\w+-])/gi;
-  let xorSelect = /^([\w|! |!][\w +-]+[\w+-])(?=\s?\*)|(?<=\*\s)([\w|(! )|!][\w +-]+[\w+-])|(?<=\*)([\w!][\w +-]+[\w+-])/gi;
-
-  andSkills = group.match(andSelect);
-  orSkills = group.match(orSelect);
-  xorSkills = group.match(xorSelect);
-
-  if (andSkills != null)
-    andSkills.map((skill) => {
-      searchParams.and.push(skill.toLowerCase());
+  tokenSelect = /([\w\d!.\$][\w\d .+-]*[\w\d\$+-.])|(?<=[ \|&\*])\w(?=[ \|&\*])|(?<=[ \|&\*])\w|\w(?=[ \|&\*])/gi;
+  group = group.replace(/! /g, '!');
+  tokens = group.match(tokenSelect);
+  if (tokens != null)
+    tokens.map((token) => {
+      searchParams.components.push(token);
     });
 
-  if (orSkills != null)
-    orSkills.map((skill) => {
-      searchParams.or.push(skill.toLowerCase());
-    });
+  searchParams.containsMacros = /\$\d*\$/g.test(group);
 
-  if (xorSkills != null)
-    xorSkills.map((skill) => {
-      searchParams.xor.push(skill.toLowerCase());
-    });
+  if (/&/g.test(group)) searchParams.operation = 'and';
+  else if (/\|/g.test(group)) searchParams.operation = 'or';
+  else if (/\*/g.test(group)) searchParams.operation = 'xor';
 
   return searchParams;
 }
 
 function parseQuery(query) {
-  var chunks = [
-    {
-      id: 0,
-      ops: [],
-    },
-  ];
+  var chunks = [];
 
   var curID = 1;
   var managedString = query;
 
   function parseChunk(startIDX, endIDX) {
-    if (!/\(\)/g.test(managedString.slice(startIDX, endIDX + 1))) {
+    if (/^[^\(\)]*$/g.test(managedString.slice(startIDX + 1, endIDX))) {
       chunks.push({
         id: curID,
         ops: parseString(managedString.slice(startIDX, endIDX + 1)),
@@ -58,6 +44,8 @@ function parseQuery(query) {
 
     var startChunkIDX = -1;
     var endChunkIDX = -1;
+
+    console.log(managedString.slice(startIDX, endIDX + 1));
 
     for (let i = 0; i < managedString.length; i++) {
       if (managedString[i] == '(') startChunkIDX = i;
@@ -80,15 +68,19 @@ function parseQuery(query) {
   }
 
   console.log(managedString);
+  while (/[\(\)]/g.test(managedString)) {
+    parseChunk(0, managedString.length);
+    console.log(managedString);
+  }
+  curID = 0;
   parseChunk(0, managedString.length);
   console.log(managedString);
   return chunks;
 }
 
-let queryString =
-  '(React & Vue&Gatsty& Angular & Software Developer) | (Python * C++)';
+let queryString = ' ((a & b) | (c & d & e)) * (e & f)';
+// let queryString =
+// ' (((react & a) & gatsby) | ( python & node.js & asp.net )) * ( software developer & top secret )';
 // let resp = parseString(queryString);
-// console.log(resp);
-
 let resp = parseQuery(queryString);
-console.log(JSON.stringify(resp));
+console.log(JSON.stringify(resp, 0, 2));
