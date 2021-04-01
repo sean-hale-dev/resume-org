@@ -43,8 +43,11 @@ function parseQuery(query) {
   var managedString = query;
 
   function parseChunk(startIDX, endIDX) {
-    if (!managedString.slice(startIDX + 1, endIDX).test(/\(\)/g)) {
-      chunks.push({ id: curID, ops: parseString(chunkTxt) });
+    if (!/\(\)/g.test(managedString.slice(startIDX, endIDX + 1))) {
+      chunks.push({
+        id: curID,
+        ops: parseString(managedString.slice(startIDX, endIDX + 1)),
+      });
       managedString = managedString.replace(
         managedString.slice(startIDX, endIDX + 1),
         `$$${curID}$$`
@@ -52,7 +55,34 @@ function parseQuery(query) {
       curID += 1;
       return;
     }
+
+    var startChunkIDX = -1;
+    var endChunkIDX = -1;
+
+    for (let i = 0; i < managedString.length; i++) {
+      if (managedString[i] == '(') startChunkIDX = i;
+      if (managedString[i] == ')') {
+        endChunkIDX = i;
+        break;
+      }
+    }
+
+    if (
+      endChunkIDX <= startChunkIDX ||
+      startChunkIDX == -1 ||
+      endChunkIDX == -1
+    ) {
+      console.error('ERROR: Chunk detection failed');
+      return;
+    }
+
+    parseChunk(startChunkIDX, endChunkIDX);
   }
+
+  console.log(managedString);
+  parseChunk(0, managedString.length);
+  console.log(managedString);
+  return chunks;
 }
 
 let queryString =
@@ -61,4 +91,4 @@ let queryString =
 // console.log(resp);
 
 let resp = parseQuery(queryString);
-console.log(resp);
+console.log(JSON.stringify(resp));
