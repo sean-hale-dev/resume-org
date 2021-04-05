@@ -209,8 +209,9 @@ function parseResume(res, args, db, deleteFile, allCurrentKeys, file_type) {
         });
         
         return resume_id;
-      }).then(resume_id => {
-        // this then() gets the resume back and downloads it to the server
+      })
+      /* this then() gets the resume back and downloads it to the server
+      .then(resume_id => {
         getResume(db, resume_id).then(resume => {
           downloadResumeToServer(db, resume.resume, getExtFromType(resume.type));
           console.log(`File redownloaded to server from database`);
@@ -220,7 +221,8 @@ function parseResume(res, args, db, deleteFile, allCurrentKeys, file_type) {
           console.log(`No resume found with _id = ${resume_id}`)
         });
       });
-      
+      */
+     
       if (deleteFile) {
         console.log(`Now deleting - "${args[0]}"`);
         fs.unlinkSync(args[0]);
