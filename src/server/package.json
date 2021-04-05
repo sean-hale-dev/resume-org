@@ -2,6 +2,7 @@
   "dependencies": {
     "express": "^4.17.1",
     "formidable": "^1.2.2",
+    "mongodb": "^3.6.5",
     "nodemon": "^2.0.7"
   }
 }
