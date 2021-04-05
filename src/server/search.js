@@ -1,3 +1,5 @@
+import { MongoDB } from 'mongodb';
+
 function parseString(group) {
   var searchParams = {
     operation: '',
@@ -74,6 +76,17 @@ function parseQuery(query) {
   curID = 0;
   parseChunk(0, managedString.length);
   return chunks;
+}
+
+function handleQuery(queryObj) {
+  function resolveQuery(componentObj) {
+    if (!componentObj.containsMacros) {
+      let mongoQuery = {};
+      switch (componentObj.operation) {
+        case 'and':
+      }
+    }
+  }
 }
 
 // let queryString = ' ((a & b) | (c & d & e)) * (e & f)';
