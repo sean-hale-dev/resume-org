@@ -30,9 +30,11 @@ function parseQuery(query) {
 
   function parseChunk(startIDX, endIDX) {
     if (/^[^\(\)]*$/g.test(managedString.slice(startIDX + 1, endIDX))) {
-      chunks.push({
+      chunks.splice(curID, 0, {
         id: curID,
         ops: parseString(managedString.slice(startIDX, endIDX + 1)),
+        resolved: false,
+        response: {},
       });
       managedString = managedString.replace(
         managedString.slice(startIDX, endIDX + 1),
@@ -44,8 +46,6 @@ function parseQuery(query) {
 
     var startChunkIDX = -1;
     var endChunkIDX = -1;
-
-    console.log(managedString.slice(startIDX, endIDX + 1));
 
     for (let i = 0; i < managedString.length; i++) {
       if (managedString[i] == '(') startChunkIDX = i;
@@ -70,17 +70,15 @@ function parseQuery(query) {
   console.log(managedString);
   while (/[\(\)]/g.test(managedString)) {
     parseChunk(0, managedString.length);
-    console.log(managedString);
   }
   curID = 0;
   parseChunk(0, managedString.length);
-  console.log(managedString);
   return chunks;
 }
 
-let queryString = ' ((a & b) | (c & d & e)) * (e & f)';
-// let queryString =
-// ' (((react & a) & gatsby) | ( python & node.js & asp.net )) * ( software developer & top secret )';
+// let queryString = ' ((a & b) | (c & d & e)) * (e & f)';
+let queryString =
+  '(((react & a) & gatsby) | ( python & node.js & asp.net )) * ( software developer & top secret )';
 // let resp = parseString(queryString);
 let resp = parseQuery(queryString);
 console.log(JSON.stringify(resp, 0, 2));
