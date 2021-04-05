@@ -51,7 +51,15 @@ mongo_client.connect(process.env.MONGO_URI, function(err, database) {
   
   app.get('/resume-download', (req, res) => {
     // file path hard-coded for testing purposes
-    sendResumeDownloadToClient(`${__dirname}/resumes/testfilelocation.docx`, res);
+    if(req.query.type == "pdf") {
+      sendResumeDownloadToClient(`${__dirname}/resumes/testfilelocation.pdf`, res);      
+    }
+    else if(req.query.type == "docx") {
+      sendResumeDownloadToClient(`${__dirname}/resumes/testfilelocation.docx`, res);
+    }
+    else {
+      res.send("Incompatible file type.");
+    }
   });
   
   app.listen(port, () => {
@@ -59,6 +67,7 @@ mongo_client.connect(process.env.MONGO_URI, function(err, database) {
   });
 });
 
+// uploads a resume as a new document in the "resumes" collection in the database
 function dbUpload(db, file_data, skills_json, file_type) {
   var db_upload = { resume: file_data, type: file_type, skills: skills_json.skills};
   return new Promise((resolve, reject) => {
@@ -71,6 +80,7 @@ function dbUpload(db, file_data, skills_json, file_type) {
  });
 }
 
+// returns all skills in the skill_assoc collection
 function dbGetKeys(db) {
   return new Promise((resolve, reject) => {
     db.collection("skill_assoc").find("name").toArray( function(err, result) {
@@ -109,12 +119,14 @@ function insertNewSkills(db, allCurrentKeys, skills_json) {
   }
 }
 
+// returns file type extension
 function getExtFromType(type) {
   if(type == "application/pdf") return ".pdf";
   if(type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document") return ".docx";
   return null;
 }
 
+// update the skill_assoc collection in the database with the new resume
 function updateSkillAssoc(db, skills_json, resume_id) {
   console.log("updateMany happening");
   db.collection("skill_assoc").updateMany({
@@ -128,6 +140,7 @@ function updateSkillAssoc(db, skills_json, resume_id) {
   });
 }
 
+// pulls a resume document from the database by its _id
 function getResume(db, resume_id) {
   return new Promise((resolve, reject) => {
     db.collection("resumes").find({_id: resume_id}).toArray( function(err, result) {
@@ -138,15 +151,21 @@ function getResume(db, resume_id) {
   });
 }
 
+// pulls a resume from the database and stores it in src/server/resumes
 function downloadResumeToServer(db, resume_binary, file_ext) {
   console.log("About to write the pulled resume now");
   fs.writeFileSync(`${__dirname}/resumes/testfilelocation${file_ext}`, Buffer.from(resume_binary.toString("binary"), "binary"), "binary");
 }
 
+// sends the resume from the given file path on the server to the client as a download
 function sendResumeDownloadToClient(file_path, res) {
   res.download(file_path, (err) => {
     console.log(err);
   });
+}
+
+function sendResumeArrayToClient(resume_list, res) {
+  res.json({resumes: resume_list});
 }
 
 function parseResume(res, args, db, deleteFile, allCurrentKeys, file_type) {
@@ -155,7 +174,7 @@ function parseResume(res, args, db, deleteFile, allCurrentKeys, file_type) {
   console.log('Resume being parsed - awaiting results');
   process.stdout.on('data', function (data) {
     console.log(`data.toString(): ${data.toString()}`);
-    if(!(data.toString().includes(" 0 skills"))) {
+    if((data.toString().includes(" 0 skills"))) {
       res.send("No skills were found in the uploaded resume. Resume not saved.");
     }
     if (data.toString().charCodeAt(0) != 27) {
@@ -191,6 +210,7 @@ function parseResume(res, args, db, deleteFile, allCurrentKeys, file_type) {
         
         return resume_id;
       }).then(resume_id => {
+        // this then() gets the resume back and downloads it to the server
         getResume(db, resume_id).then(resume => {
           downloadResumeToServer(db, resume.resume, getExtFromType(resume.type));
           console.log(`File redownloaded to server from database`);
