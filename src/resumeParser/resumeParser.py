@@ -287,7 +287,8 @@ def extract_skills(corpus, filename):
 
 @click.command()
 @click.argument('resumeFile')
-def cli(resumefile):
+@click.option('--install', is_flag=True, help="Install NLTK packages required for operation", default=False)
+def cli(resumefile, install):
     '''
     Entry point for the script, handles the read in and file extension detection for the input resume file.
     
@@ -296,6 +297,11 @@ def cli(resumefile):
     Parameters:
         resumefile (string): Path to the input resume
     '''
+
+    if install:
+        systemPrep()
+        return
+        
     resumefileExt = resumefile.split('.')[-1].lower()
 
     text = None
