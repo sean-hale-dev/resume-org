@@ -69,7 +69,7 @@ mongo_client.connect(process.env.MONGO_URI, function(err, database) {
 
 // uploads a resume as a new document in the "resumes" collection in the database
 function dbUpload(db, file_data, skills_json, file_type) {
-  var db_upload = { resume: file_data, type: file_type, skills: skills_json.skills};
+  var db_upload = { resume: file_data, type: file_type, skills: skills_json.skills, employee: "Test Employee"};
   return new Promise((resolve, reject) => {
     db.collection("resumes").insertOne(db_upload, function(err, res) {
       if (err) return reject(err);
