@@ -245,4 +245,4 @@ const search = async (searchString) => {
   console.log(queryResp);
 };
 
-search(' (angular & react) & python & c');
+search(' (angular * react) ');
