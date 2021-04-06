@@ -21,6 +21,29 @@ Set.prototype.intersection = function (otherSet) {
   return intersectionSet;
 };
 
+// Perform union operation between
+// called set and otherSet
+//
+// FUNCTION GRABBED FROM https://www.geeksforgeeks.org/sets-in-javascript/
+
+Set.prototype.union = function (otherSet) {
+  // creating new set to store union
+  var unionSet = new Set();
+
+  // iterate over the values and add
+  // it to unionSet
+  for (var elem of this) {
+    unionSet.add(elem);
+  }
+
+  // iterate over the values and add it to
+  // the unionSet
+  for (var elem of otherSet) unionSet.add(elem);
+
+  // return the values of unionSet
+  return unionSet;
+};
+
 /*
  * VOCAB:
  * query -> A string of skills joined by logical operators and grouped in parenthesis ( &, *, | ) i.e. ((a & b) | (c * d))
@@ -189,6 +212,8 @@ async function handleQuery(queryObj) {
 
         if (chunk.ops.operation == 'and')
           chunkResp = chunkResp.intersection(comparisonSet);
+        if (chunk.ops.operation == 'or')
+          chunkResp = chunkResp.union(comparisonSet);
       }
     });
     return chunkResp;
@@ -204,4 +229,4 @@ const search = async (searchString) => {
   console.log(queryResp);
 };
 
-search(' (python & react) & angular ');
+search(' (angular & react) | python ');
