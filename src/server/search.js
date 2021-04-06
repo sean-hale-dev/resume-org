@@ -204,4 +204,4 @@ const search = async (searchString) => {
   console.log(queryResp);
 };
 
-search(' python & react ');
+search(' (python & react) & angular ');
