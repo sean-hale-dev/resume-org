@@ -20,6 +20,8 @@ import ArrowForwardIcon from '@material-ui/icons/ArrowForward';
 import PageBody from './shared/pagebody.js';
 import { withStyles } from '@material-ui/core/styles';
 import { grey } from '@material-ui/core/colors';
+import axios from 'axios';
+
 
 const DUMMY_DATA = [
   {
@@ -79,13 +81,31 @@ class Database extends Component {
     super(props);
     // TODO: Implement Search Function
     this.state = {
-      searchResults: DUMMY_DATA,
+      searchResults: [],
+      searchText: "",
     };
+    this.handleSearch.bind(this);
+  }
+
+  handleSearch() {
+    const { searchText } = this.state;
+    console.log(`Searching for ${searchText}`);
+    axios.post(`http://${window.location.hostname}:8080/resume-search`, {queryString: searchText}).then(res => {
+      console.log(res);
+      this.setState({
+        searchResults: res.data.map(data => ({
+          name: data.employee || "Unknown Employee",
+          matchedSkills: data.skills || [], 
+          position: data.position || "Unknown Position",
+          experience: data.experience || "Unknown",
+        }))
+      })
+    })
   }
 
   render() {
     const { classes } = this.props;
-    const { searchResults } = this.state;
+    const { searchResults, searchText } = this.state;
     return (
       <>
         <Header selectedPage="Resume Database" />
@@ -96,11 +116,13 @@ class Database extends Component {
                 <SearchIcon />
                 <TextField
                   label="Search Resumes"
-                  variant="standard"
+                  variant="outlined"
                   type="search"
                   className={classes.searchField}
+                  value={searchText}
+                  onChange={event => {this.setState({searchText: event.target.value})}}
                 />
-                <Button variant="contained" color="primary">
+                <Button variant="contained" color="primary" onClick={() => {this.handleSearch()}}>
                   Search
                 </Button>
               </Grid>

@@ -197,6 +197,7 @@ async function handleQuery(queryObj) {
   // Parse mongo response into sets and store
   var resp = await fetchFromMongo(keys);
   resp.map((respObj) => (respTable[respObj.name] = new Set(respObj.resumes)));
+  console.log(resp)
 
   // Recursivly calculate a chunk, starting with non-macro chunks and working up to the root chunk.
   const resolveChunk = (chunk) => {
@@ -243,6 +244,9 @@ const search = async (searchString) => {
   let queryResp = await handleQuery(resp);
   if (queryResp.size == 0) queryResp = 'No results found';
   console.log(queryResp);
+  return queryResp;
 };
 
 search(' (angular * react) ');
+// export default search;
+exports.search = search;
