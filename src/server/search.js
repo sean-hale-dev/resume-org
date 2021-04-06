@@ -162,11 +162,9 @@ async function handleQuery(queryObj) {
   // Parse mongo response into sets and store
   var resp = await fetchFromMongo(keys);
   resp.map((respObj) => (respTable[respObj.name] = new Set(respObj.resumes)));
-  console.log(respTable);
 
   // Recursivly calculate a chunk, starting with non-macro chunks and working up to the root chunk.
   const resolveChunk = (chunk) => {
-    console.log(chunk);
     // If chunk has unresolved macros, first resolve before continuing
     chunk.ops.components.map((component) => {
       if (component.isMacro && macrosTable[component.token] == null) {
@@ -182,7 +180,6 @@ async function handleQuery(queryObj) {
         chunkResp = component.isMacro
           ? macrosTable[component.token]
           : respTable[component.token];
-        console.log('Set started');
       } else {
         let comparisonSet = component.isMacro
           ? macrosTable[component.token]
