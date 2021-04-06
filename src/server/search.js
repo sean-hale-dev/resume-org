@@ -1,4 +1,5 @@
-import { MongoDB } from 'mongodb';
+const { MongoClient, ObjectID } = require('mongodb');
+const dotenv = require('dotenv').config();
 
 function parseString(group) {
   var searchParams = {
@@ -12,7 +13,10 @@ function parseString(group) {
   tokens = group.match(tokenSelect);
   if (tokens != null)
     tokens.map((token) => {
-      searchParams.components.push(token);
+      let component = {};
+      component.token = token;
+      component.isMacro = /\$\d*\$/g.test(token);
+      searchParams.components.push(component);
     });
 
   searchParams.containsMacros = /\$\d*\$/g.test(group);
@@ -69,7 +73,6 @@ function parseQuery(query) {
     parseChunk(startChunkIDX, endChunkIDX);
   }
 
-  console.log(managedString);
   while (/[\(\)]/g.test(managedString)) {
     parseChunk(0, managedString.length);
   }
@@ -78,20 +81,74 @@ function parseQuery(query) {
   return chunks;
 }
 
-function handleQuery(queryObj) {
-  function resolveQuery(componentObj) {
-    if (!componentObj.containsMacros) {
-      let mongoQuery = {};
-      switch (componentObj.operation) {
-        case 'and':
-      }
+async function handleQuery(queryObj) {
+  var respTable = {};
+  var keys = [];
+  var macrosTable = {};
+  queryObj.map((obj) => {
+    obj.ops.components.map((component) => {
+      if (!component.isMacro) keys.push(component.token);
+      else macrosTable[component.token] = null;
+    });
+  });
+
+  const fetchFromMongo = async (tokenArr) => {
+    const mongoClient = new MongoClient(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    try {
+      await mongoClient.connect();
+      let mgdbQueryObj = { $or: [] };
+      tokenArr.map((t) => mgdbQueryObj['$or'].push({ name: t }));
+      var resRet = await mongoClient
+        .db('resume_org')
+        .collection('skill_assoc')
+        .find(mgdbQueryObj, { _id: 0 })
+        .toArray();
+    } finally {
+      mongoClient.close();
+      return resRet;
     }
-  }
+  };
+
+  var resp = await fetchFromMongo(keys);
+  resp.map((respObj) => (respTable[respObj.name] = new Set(respObj.resumes)));
+  console.log(respTable);
+
+  const resolveChunk = (chunk) => {
+    chunk.ops.components.map((component) => {
+      if (component.isMacro && macrosTable[component.token] == null) {
+        let idx = component.token.match(/\d*/g)[0];
+        macrosTable.component.token = resolveChunk(idx);
+      }
+    });
+
+    let chunkResp = null;
+    switch (chunk.ops.operation) {
+      case 'and':
+        chunk.ops.components.map((component) => {
+          if (chunkResp == null) chunkResp = respTable[component.token];
+          else if (!component.isMacro)
+            chunkResp = chunkResp.intersection(respTable[component.token]);
+          else chunkResp = chunkResp.intersection(macrosTable[component.token]);
+        });
+      default:
+        break;
+    }
+
+    return chunkResp;
+  };
+
+  let result = resolveChunk(queryObj[0]);
+  return result;
 }
 
-// let queryString = ' ((a & b) | (c & d & e)) * (e & f)';
-let queryString =
-  '(((react & a) & gatsby) | ( python & node.js & asp.net )) * ( software developer & top secret )';
-// let resp = parseString(queryString);
-let resp = parseQuery(queryString);
-console.log(JSON.stringify(resp, 0, 2));
+const search = async (searchString) => {
+  let resp = parseQuery(searchString);
+  let queryResp = await handleQuery(resp);
+  console.log(queryResp);
+};
+
+search('( React & vue ) & angular');
