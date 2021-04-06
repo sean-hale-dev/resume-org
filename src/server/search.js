@@ -222,6 +222,7 @@ async function handleQuery(queryObj) {
 
         if (comparisonSet == null) comparisonSet = new Set();
 
+        // Perform chunk calculation
         if (chunk.ops.operation == 'and')
           chunkResp = chunkResp.intersection(comparisonSet);
         if (chunk.ops.operation == 'or')
