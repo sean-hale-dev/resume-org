@@ -44,6 +44,18 @@ Set.prototype.union = function (otherSet) {
   return unionSet;
 };
 
+Set.prototype.symmetricDifference = function (otherSet) {
+  let _difference = new Set(this);
+  for (let elem of otherSet) {
+    if (_difference.has(elem)) {
+      _difference.delete(elem);
+    } else {
+      _difference.add(elem);
+    }
+  }
+  return _difference;
+};
+
 /*
  * VOCAB:
  * query -> A string of skills joined by logical operators and grouped in parenthesis ( &, *, | ) i.e. ((a & b) | (c * d))
@@ -214,6 +226,8 @@ async function handleQuery(queryObj) {
           chunkResp = chunkResp.intersection(comparisonSet);
         if (chunk.ops.operation == 'or')
           chunkResp = chunkResp.union(comparisonSet);
+        if (chunk.ops.operation == 'xor')
+          chunkResp = chunkResp.symmetricDifference(comparisonSet);
       }
     });
     return chunkResp;
@@ -226,7 +240,8 @@ async function handleQuery(queryObj) {
 const search = async (searchString) => {
   let resp = parseQuery(searchString);
   let queryResp = await handleQuery(resp);
+  if (queryResp.size == 0) queryResp = 'No results found';
   console.log(queryResp);
 };
 
-search(' (angular & react) | python ');
+search(' (angular & react) & python & c');
