@@ -39,3 +39,4 @@ clean_parser:
 
 clean: clean_node clean_parser
 
+fresh: clean install
