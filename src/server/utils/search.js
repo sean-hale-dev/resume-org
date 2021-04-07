@@ -247,7 +247,8 @@ async function handleQuery(queryObj) {
 
   let result = resolveChunk(queryObj[0]);
   response.status = 0;
-  response.message = result;
+  response.message = 'Returning result';
+  response.payload = result;
   return response;
 }
 
