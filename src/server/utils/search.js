@@ -83,7 +83,7 @@ function parseString(group) {
   };
 
   // Select skill tokens from raw chunk
-  tokenSelect = /([\w\d!.\$][\w\d .+-]*[\w\d\$+-.])|(?<=[ \|&\*])\w(?=[ \|&\*])|(?<=[ \|&\*])\w|\w(?=[ \|&\*])/gi;
+  tokenSelect = /([\w\d!.\$][\w\d .+\$-]*[\w\d\$+-.])|(?<=[ \|&\*])\w(?=[ \|&\*])|(?<=[ \|&\*])\w|\w(?=[ \|&\*])/gi;
   group = group.replace(/! /g, '!');
   tokens = group.match(tokenSelect);
   // If tokens were selected, parse and store
@@ -251,13 +251,17 @@ async function handleQuery(queryObj) {
 
       if (chunkResp == null) {
         chunkResp = component.isMacro
-          ? macrosTable[component.token]
+          ? component.isNegated
+            ? completeResumeSet.difference(macrosTable[component.token])
+            : macrosTable[component.token]
           : component.isNegated
           ? completeResumeSet.difference(respTable[component.token])
           : respTable[component.token];
       } else {
         let comparisonSet = component.isMacro
-          ? macrosTable[component.token]
+          ? component.isNegated
+            ? completeResumeSet.difference(macrosTable[component.token])
+            : macrosTable[component.token]
           : component.isNegated
           ? completeResumeSet.difference(respTable[component.token])
           : respTable[component.token];
@@ -311,6 +315,6 @@ const search = async (searchString) => {
   return response;
 };
 
-let searchQuery = '!React & !Angular';
+let searchQuery = '!( React | Angular )';
 console.log('Searching: ' + searchQuery);
 search(searchQuery);
