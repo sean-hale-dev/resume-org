@@ -1,28 +1,33 @@
+MAKEFLAGS += -j3
+
 NODEPM = npm
 ifneq (, $(shell which yarn))
 	NODEPM = yarn
 endif
 
-setup:
-	pip3 install pipenv
+install:
+	install_parser install_frontend install_server
 
+run:
+	start_frontend start_server
+
+.PHONY: install_parser
 install_parser:
-	make setup
-	cd src/resumeParser && export SYSTEM_VERSION_COMPAT=1 && pipenv install && pipenv run resumeParser foobar --install
+	cd src/server/utils/parser && export SYSTEM_VERSION_COMPAT=1 && pipenv install && pipenv run resumeParser foobar --install
 
-install_frontend:
-	cd src/client/resume-org && $(NODEPM) install
-
-install_backend:
+.PHONY: install_server
+install_server:
 	cd src/server && $(NODEPM) install
 
-install:
-	make install_parser
-	make install_frontend
-	make install_backend
+.PHONY: install_frontend
+install_frontend:
+	cd src/client && $(NODEPM) install
 
-frontend_dev:
-	cd src/client/resume-org && $(NODEPM) start
+.PHONY: start_frontend
+start_frontend:
+	cd src/client && $(NODEPM) start
 
-backend_dev:
+.PHONY: start_server
+start_server:
 	cd src/server && $(NODEPM) start
+
