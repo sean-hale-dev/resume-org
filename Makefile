@@ -23,7 +23,7 @@ install_parser:
 	cd src/server/utils/parser && export SYSTEM_VERSION_COMPAT=1 && pipenv install && pipenv run resumeParser foobar --install
 
 .PHONY: install_parser_novenv:
-	cd src/server/utils/parser && pip3 install -r requirements.txt
+	cd src/server/utils/parser && pip3 install -r requirements.txt && pip3 install --user --editable .
 
 .PHONY: install_server
 install_server:
