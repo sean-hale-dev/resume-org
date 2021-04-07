@@ -16,13 +16,14 @@ run:
 
 .PHONY: clean
 clean:
-	find . -name "node_modules" -delete && cd src/server/utils/parser && pipenv rm
+	find . -type d -name "node_modules" -exec rm -rf {} \; && cd src/server/utils/parser && pipenv --rm
 
 .PHONY: install_parser
 install_parser:
 	cd src/server/utils/parser && export SYSTEM_VERSION_COMPAT=1 && pipenv install && pipenv run resumeParser foobar --install
 
-.PHONY: install_parser_novenv:
+.PHONY: install_parser_novenv
+install_parser_novenv:
 	cd src/server/utils/parser && pip3 install -r requirements.txt && pip3 install --user --editable .
 
 .PHONY: install_server
