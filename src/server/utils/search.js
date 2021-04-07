@@ -43,6 +43,7 @@ Set.prototype.union = function (otherSet) {
   return unionSet;
 };
 
+// Function adapted from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set
 Set.prototype.symmetricDifference = function (otherSet) {
   let _difference = new Set(this);
   for (let elem of otherSet) {
@@ -52,6 +53,13 @@ Set.prototype.symmetricDifference = function (otherSet) {
       _difference.add(elem);
     }
   }
+  return _difference;
+};
+
+// Function adapted from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set
+Set.prototype.difference = function (otherSet) {
+  let _difference = new Set(this);
+  for (let elem of otherSet) _difference.delete(elem);
   return _difference;
 };
 
@@ -82,8 +90,10 @@ function parseString(group) {
   if (tokens != null)
     tokens.map((token) => {
       let component = {};
-      component.token = token;
       component.isMacro = /\$\d*\$/g.test(token);
+      component.isNegated = /!/g.test(token);
+      if (component.isNegated) token = token.replace(/!/g, '');
+      component.token = token;
       searchParams.components.push(component);
     });
 
@@ -160,21 +170,23 @@ function parseQuery(query) {
 // Function which takes in a parsed query obj and calculates the query from mongo
 async function handleQuery(queryObj) {
   var respTable = {};
-  var keys = [];
   var macrosTable = {};
-
+  var keys = [];
+  var negKeys = [];
   var response = {};
 
   // Construct initial lookup tables
   queryObj.map((obj) => {
     obj.ops.components.map((component) => {
-      if (!component.isMacro) keys.push(component.token);
+      if (!component.isMacro && !component.isNegated)
+        keys.push(component.token);
+      if (component.isNegated) negKeys.push(component.token);
       else macrosTable[component.token] = null;
     });
   });
 
   // Grab resume _id's from mongo with the keyset
-  const fetchFromMongo = async (tokenArr) => {
+  const fetchFromMongo = async (tokenArr, negation = false) => {
     const mongoClient = new MongoClient(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -184,8 +196,13 @@ async function handleQuery(queryObj) {
 
     try {
       await mongoClient.connect();
-      let mgdbQueryObj = { $or: [] };
-      tokenArr.map((t) => mgdbQueryObj['$or'].push({ name: t }));
+
+      // Construct mongoDB query object if needed
+      let mgdbQueryObj = {};
+      if (!negation) {
+        mgdbQueryObj = { $or: [] };
+        tokenArr.map((t) => mgdbQueryObj['$or'].push({ name: t }));
+      }
       mgdbRetObj = await mongoClient
         .db('resume_org')
         .collection('searchTesting')
@@ -200,7 +217,7 @@ async function handleQuery(queryObj) {
   };
 
   // Parse mongo response into sets and store
-  var resp = await fetchFromMongo(keys);
+  var resp = await fetchFromMongo(keys, negKeys.length != 0);
   if (resp.length == 0) {
     response.status = -1;
     response.message = 'ERROR: No valid skills provided';
@@ -220,15 +237,29 @@ async function handleQuery(queryObj) {
     });
 
     // Construct return set and calculate chunk
-    let chunkResp = null;
+    let chunkResp = null; // Return variable, set of all valid resume IDs for chunk
+    let completeResumeSet = null; // Set containing all resume documents
     chunk.ops.components.map((component) => {
+      // If evaluating a negated component and we have not already done so, construct the master skill set
+      if (component.isNegated && completeResumeSet == null) {
+        completeResumeSet = new Set();
+        Object.keys(respTable).map(
+          (respKey) =>
+            (completeResumeSet = completeResumeSet.union(respTable[respKey]))
+        );
+      }
+
       if (chunkResp == null) {
         chunkResp = component.isMacro
           ? macrosTable[component.token]
+          : component.isNegated
+          ? completeResumeSet.difference(respTable[component.token])
           : respTable[component.token];
       } else {
         let comparisonSet = component.isMacro
           ? macrosTable[component.token]
+          : component.isNegated
+          ? completeResumeSet.difference(respTable[component.token])
           : respTable[component.token];
 
         if (comparisonSet == null) comparisonSet = new Set();
@@ -280,6 +311,6 @@ const search = async (searchString) => {
   return response;
 };
 
-let searchQuery = 'ReAct';
+let searchQuery = '!React & !Angular';
 console.log('Searching: ' + searchQuery);
 search(searchQuery);
