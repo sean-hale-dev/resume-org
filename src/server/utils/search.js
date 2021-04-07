@@ -1,8 +1,7 @@
 const { MongoClient, ObjectID } = require('mongodb');
 const dotenv = require('dotenv').config();
 
-// Performs intersection operation between
-// called set and otherSet
+// Performs intersection operation between called set and otherSet
 //
 // FUNCTION GRABBED FROM https://www.geeksforgeeks.org/sets-in-javascript/
 Set.prototype.intersection = function (otherSet) {
@@ -239,10 +238,11 @@ async function handleQuery(queryObj) {
 }
 
 const search = async (searchString) => {
+  searchString = searchString.toLowerCase();
   let resp = parseQuery(searchString);
   let queryResp = await handleQuery(resp);
   if (queryResp.size == 0) queryResp = 'No results found';
   console.log(queryResp);
 };
 
-search(' (angular * react) ');
+search(' (angular | react) ');
