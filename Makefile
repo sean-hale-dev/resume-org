@@ -5,7 +5,7 @@ ifneq (, $(shell which yarn))
 	NODEPM = yarn
 endif
 
-.PHONY: install install_production run clean install_parser install_parser_novenv install_server install_frontend start_frontend start_server fresh clean_node clean_parser
+.PHONY: install install_production run clean install_parser install_parser_novenv install_server install_frontend start_frontend start_server clean_node clean_parser
 
 install_parser:
 	cd src/server/utils/parser && export SYSTEM_VERSION_COMPAT=1 && pipenv install && pipenv run resumeParser foobar --install
@@ -38,5 +38,3 @@ clean_parser:
 	cd src/server/utils/parser && pipenv --rm
 
 clean: clean_node clean_parser
-
-fresh: clean install
