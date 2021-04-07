@@ -252,8 +252,7 @@ def extract_skills(corpus, filename):
     stop_words = set(nltk.corpus.stopwords.words('english'))
     word_tokens = nltk.tokenize.word_tokenize(corpus)
 
-    filtered_tokens = [ w for w in word_tokens if w not in stop_words ]
-    filtered_tokens = [ w.lower() for w in word_tokens if w.isalpha() ]
+    filtered_tokens = [ w.lower() for w in word_tokens if w not in stop_words and w.isalpha() ]
 
     bitri = nltk.everygrams(filtered_tokens, 2, 3)
     filtered_tokens = set(filtered_tokens)
