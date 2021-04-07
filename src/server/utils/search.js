@@ -163,6 +163,8 @@ async function handleQuery(queryObj) {
   var keys = [];
   var macrosTable = {};
 
+  var response = {};
+
   // Construct initial lookup tables
   queryObj.map((obj) => {
     obj.ops.components.map((component) => {
@@ -178,23 +180,33 @@ async function handleQuery(queryObj) {
       useUnifiedTopology: true,
     });
 
+    let mgdbRetObj = [];
+
     try {
       await mongoClient.connect();
       let mgdbQueryObj = { $or: [] };
       tokenArr.map((t) => mgdbQueryObj['$or'].push({ name: t }));
-      var resRet = await mongoClient
+      mgdbRetObj = await mongoClient
         .db('resume_org')
         .collection('searchTesting')
         .find(mgdbQueryObj, { _id: 0 })
         .toArray();
+    } catch (err) {
+      console.error(err);
     } finally {
       mongoClient.close();
-      return resRet;
+      return mgdbRetObj;
     }
   };
 
   // Parse mongo response into sets and store
   var resp = await fetchFromMongo(keys);
+  if (resp.length == 0) {
+    response.status = -1;
+    response.message = 'ERROR: No valid skills provided';
+    return response;
+  }
+
   resp.map((respObj) => (respTable[respObj.name] = new Set(respObj.resumes)));
 
   // Recursivly calculate a chunk, starting with non-macro chunks and working up to the root chunk.
@@ -234,15 +246,39 @@ async function handleQuery(queryObj) {
   };
 
   let result = resolveChunk(queryObj[0]);
-  return result;
+  response.status = 0;
+  response.message = result;
+  return response;
 }
 
 const search = async (searchString) => {
+  let response = {};
+  if (process.env.MONGO_URI == null) {
+    console.error(
+      '<SEARCH> ERROR: Unable to resolve MONGO_URI environmental variable... cannot connect to database'
+    );
+    response.status = -1;
+    response.message = 'ERROR: Missing MONGO_URI env. var';
+
+    return response;
+  }
+
+  if (searchString == null) {
+    console.error('<SEARCH> ERROR: No query string provided');
+    response.status = -1;
+    response.message = 'ERROR: No query string provided';
+
+    return response;
+  }
+
   searchString = searchString.toLowerCase();
   let resp = parseQuery(searchString);
-  let queryResp = await handleQuery(resp);
-  if (queryResp.size == 0) queryResp = 'No results found';
-  console.log(queryResp);
+  response = await handleQuery(resp);
+
+  console.log(response);
+  return response;
 };
 
-search(' (angular | react) ');
+let searchQuery = 'ReAct';
+console.log('Searching: ' + searchQuery);
+search(searchQuery);
