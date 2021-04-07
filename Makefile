@@ -11,6 +11,10 @@ install:
 run:
 	start_frontend start_server
 
+.PHONY: clean
+clean:
+	find . -name "node_modules" -delete && cd src/server/utils/parser && pipenv rm
+
 .PHONY: install_parser
 install_parser:
 	cd src/server/utils/parser && export SYSTEM_VERSION_COMPAT=1 && pipenv install && pipenv run resumeParser foobar --install
