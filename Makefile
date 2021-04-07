@@ -25,14 +25,11 @@ start_frontend:
 start_server:
 	cd src/server && $(NODEPM) start
 
-install:
-	install_parser install_frontend install_server
+install: install_parser install_frontend install_server
 
-install_production:
-	install_parser_novenv install_frontend install_server
+install_production: install_parser_novenv install_frontend install_server
 
-run:
-	start_frontend start_server
+run: start_frontend start_server
 
 clean_node:
 	find . -type d -name "node_modules" -exec rm -rf {} \;
@@ -40,6 +37,5 @@ clean_node:
 clean_parser:
 	cd src/server/utils/parser && pipenv --rm
 
-clean:
-	clean_node clean_parser
+clean: clean_node clean_parser
 
