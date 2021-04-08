@@ -4,7 +4,7 @@ import { createMuiTheme } from '@material-ui/core/styles';
 const resume_org_theme = createMuiTheme({
   palette: {
     primary: {
-      main: blue["A700"],
+      main: "#ee2f3b",
     },
     secondary: {
       main: orange["A700"],

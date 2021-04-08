@@ -11,6 +11,9 @@ const mongo_client = require('mongodb');
 // import search from './search.js';
 const search = require('./search.js');
 
+
+// TODO: ADD AUTHENTICATION
+
 mongo_client.connect(process.env.MONGO_URI, function(err, database) {
   if (err) throw err;
   
@@ -69,12 +72,63 @@ mongo_client.connect(process.env.MONGO_URI, function(err, database) {
       res.send("Incompatible file type.");
     }
   });
+
+  app.post('/login', (req, res) => {
+    const {userID} = req.body;
+    console.log(`Logging in ${userID}`);
+    handleLogin(userID, db, res);
+  }); 
+
+  app.post('/getProfile', (req, res) => {
+    const {userID} = req.body;
+    getProfile(userID, db, res);
+  })
+
+  app.post('/updateProfile', (req, res) => {
+    const {userID, details} = req.body;
+    updateProfile(userID, details, db, res);
+  })
   
   app.listen(port, () => {
     console.log(`Listening on *:${port}`);
   });
 });
 
+// Handle user login
+function handleLogin(userID, db, res) {
+  db.collection("employees").findOne({userID}).then(employee => {
+    if (employee) {
+      res.json(employee);
+    } else {
+      db.collection("employees").insertOne({userID}).then(() => res.json({userID}));
+    }
+  })
+}
+
+function getProfile(userID, db, res) {
+  db.collection("employees").findOne({userID}).then(employee => {
+    employeeData = {
+      userID,
+      position: employee.position || "",
+      name: employee.name || "",
+      yearsExperience: employee.yearsExperience || false,
+    };
+    res.json(employeeData)
+  });
+}
+
+// TODO: This should *definitely* have authentication
+function updateProfile(userID, details, db, res) {
+  const updates = {};
+  if (details.name !== undefined) updates.name = details.name;
+  if (details.position  !== undefined) updates.position = details.position;
+  if (details.yearsExperience  !== undefined) updates.yearsExperience = details.yearsExperience;
+  db.collection("employees").updateOne({userID}, {
+    $set: updates,
+  }).then(() => getProfile(userID, db, res));
+}
+
+// Searches for resumes matching queryString
 function resumeSearch(searchString, db, res) {
   search.search(searchString).then(resumeIDSet => {
     const resumeGetPromises = [...resumeIDSet].map(id => db.collection("resumes").findOne({_id: id}));
@@ -195,6 +249,11 @@ function sendResumeArrayToClient(resume_list, res) {
 }
 
 function parseResume(res, args, db, deleteFile, allCurrentKeys, file_type) {
+  // TEMP:
+  TEMP_SKILLS = ["angular", "react", "javascript"];
+  res.json(TEMP_SKILLS);
+  return;
+
   var process = child_process.spawn('resumeParser', args);
 
   console.log('Resume being parsed - awaiting results');

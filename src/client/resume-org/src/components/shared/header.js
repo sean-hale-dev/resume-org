@@ -54,11 +54,11 @@ class Header extends Component {
 
   render () {
     const {open} = this.state; 
-    const {selectedPage} = this.props;
+    const {selectedPage, userID} = this.props;
     console.log(`Selected page: ${selectedPage}`);
     return <AppBar position="static">
       <Grid container>
-        <Grid item xs={1}>
+        <Grid item xs={2}>
           <Toolbar>
             <SwipeableDrawer
               anchor={"left"}
@@ -82,11 +82,25 @@ class Header extends Component {
             
           </Toolbar>
         </Grid>
-        <Grid item xs={10}>
+        <Grid item xs={8}>
           <Toolbar style={{justifyContent: "center"}}>
             <Typography variant="h4">
               {selectedPage}
             </Typography>
+          </Toolbar>
+        </Grid>
+        <Grid item xs={2}>
+          <Toolbar style={{justifyContent: "flex-end"}}>
+            {userID && <Link href={"/profile"}>
+              <Typography variant="h6" style={{color: "white"}} align="right">
+                {userID}
+              </Typography>
+            </Link>}
+            <Link href={"/login"} style={{paddingLeft: "16px"}}>
+              <Typography variant="h6" style={{color: "white"}} align="right">
+                {userID ? "Logout" : "Login"}
+              </Typography>
+            </Link>
           </Toolbar>
         </Grid>
       </Grid>

@@ -104,11 +104,11 @@ class Database extends Component {
   }
 
   render() {
-    const { classes } = this.props;
+    const { classes, userID } = this.props;
     const { searchResults, searchText } = this.state;
     return (
       <>
-        <Header selectedPage="Resume Database" />
+        <Header selectedPage="Resume Database" userID={userID}/>
         <PageBody>
           <Card>
             <Toolbar className={classes.searchToolbar}>
