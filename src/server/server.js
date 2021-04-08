@@ -88,11 +88,33 @@ mongo_client.connect(process.env.MONGO_URI, function(err, database) {
     const {userID, details} = req.body;
     updateProfile(userID, details, db, res);
   })
+
+  app.post('/getResumeSkills', (req, res) => {
+    const {userID} = req.body;
+    getResumeSkillsByUserID(userID, db, res);
+  })
   
   app.listen(port, () => {
     console.log(`Listening on *:${port}`);
   });
 });
+
+// Fetch resume skills by userID
+function getResumeSkillsByUserID(userID, db, res) {
+  db.collection("employees").findOne({userID}).then(employee => {
+    if (employee && employee.resume) {
+      db.collection("resumes").findOne({_id: employee.resume}).then(resume => {
+        if (resume && resume.skills) {
+          res.json({skills: resume.skills});
+        } else {
+          res.json({skills: []});
+        }
+      })
+    } else {
+      res.json({skills: []});
+    }
+  })
+}
 
 // Handle user login
 function handleLogin(userID, db, res) {

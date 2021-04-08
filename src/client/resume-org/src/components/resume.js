@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import Header from './shared/header.js';
 import {DropzoneArea} from 'material-ui-dropzone';
 import PageBody from './shared/pagebody.js';
-import { Button, IconButton, Card, Typography } from '@material-ui/core';
+import { Button, IconButton, Card, Typography, Grid } from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles'
 import './styles/resume.css';
 import { grey } from '@material-ui/core/colors';
@@ -24,7 +24,17 @@ class Resume extends Component {
 
   constructor(props) {
     super(props);
-    this.state = {resumeFile: undefined, skills: undefined};
+    this.state = {resumeFile: undefined, skills: undefined, isEditing: false};
+  }
+
+  componentDidMount() {
+    const {userID} = this.props;
+    if (!userID) return;
+    axios.post(`http://${window.location.hostname}:8080/getResumeSkills`, {userID}).then(res => {
+      if (res && res.data && res.data.skills) {
+        this.setState({skills: res.data.skills});
+      }
+    });
   }
 
   setResume (file) {
@@ -66,15 +76,23 @@ class Resume extends Component {
 
   render () {
     const { classes, userID } = this.props;
-    const { skills } = this.state;
+    const { skills, isEditing } = this.state;
     // console.log(skills);
     return (<>
       <Header selectedPage="Your Resume" userID={userID}/>
       <PageBody>
-        {skills && <Card>
+        {skills && skills.length > 0 && <Card>
           <Typography variant="h6">What we've parsed:</Typography>
-          <Typography>Skills: <IconButton><EditIcon /></IconButton></Typography>
-          {skills.map}
+          <Typography variant="h6">Skills: <IconButton><EditIcon /></IconButton></Typography>
+          <Grid container>
+            {skills.map(skill => isEditing ? 
+              <></> 
+            : 
+              <Grid item xs={3}>
+                <Typography align="center">{skill}</Typography>
+              </Grid>
+            )}
+          </Grid>
         </Card>}
         <Card className={classes.resumeUploadCard}>
           <DropzoneArea
