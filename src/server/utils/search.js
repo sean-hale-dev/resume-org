@@ -99,9 +99,30 @@ function parseString(group) {
 
   searchParams.containsMacros = /\$\d*\$/g.test(group);
 
-  if (/&/g.test(group)) searchParams.operation = 'and';
-  else if (/\|/g.test(group)) searchParams.operation = 'or';
-  else if (/\*/g.test(group)) searchParams.operation = 'xor';
+  let containsAnd = false,
+    containsOr = false,
+    containsXor = false;
+
+  containsAnd = /&/g.test(group) ? 1 : 0;
+  containsOr = /\|/g.test(group) ? 1 : 0;
+  containsXor = /\*/g.test(group) ? 1 : 0;
+
+  if (
+    !(containsAnd ^ containsOr ^ containsXor) &&
+    searchParams.components.length == 1 &&
+    /\$\d*\$/g.test(searchParams.components[0].token)
+  )
+    return { status: -1, message: 'ERROR: Malformed query -- Mixed operators' };
+
+  if (containsAnd) searchParams.operation = 'and';
+  else if (containsOr) searchParams.operation = 'or';
+  else if (containsXor) searchParams.operation = 'xor';
+  else if (searchParams.components.length != 1)
+    return {
+      status: -1,
+      message: 'ERROR: Malformed request -- Missing operator',
+    };
+  else searchParams.operation = 'or';
 
   return searchParams;
 }
@@ -175,15 +196,24 @@ async function handleQuery(queryObj) {
   var negKeys = [];
   var response = {};
 
+  let errorRet = null;
+
   // Construct initial lookup tables
-  queryObj.map((obj) => {
+  for (let i = 0; i < queryObj.length; i++) {
+    let obj = queryObj[i];
+    if (obj.ops.status !== undefined) {
+      errorRet = obj.ops;
+      break;
+    }
     obj.ops.components.map((component) => {
       if (!component.isMacro && !component.isNegated)
         keys.push(component.token);
       if (component.isNegated) negKeys.push(component.token);
       else macrosTable[component.token] = null;
     });
-  });
+  }
+
+  if (errorRet != null) return errorRet;
 
   // Grab resume _id's from mongo with the keyset
   const fetchFromMongo = async (tokenArr, negation = false) => {
@@ -229,6 +259,7 @@ async function handleQuery(queryObj) {
   // Recursivly calculate a chunk, starting with non-macro chunks and working up to the root chunk.
   const resolveChunk = (chunk) => {
     // If chunk has unresolved macros, first resolve before continuing
+
     chunk.ops.components.map((component) => {
       if (component.isMacro && macrosTable[component.token] == null) {
         let nextChunkIDX = component.token.slice(1, component.token.length - 1);
@@ -315,6 +346,6 @@ const search = async (searchString) => {
   return response;
 };
 
-let searchQuery = '!( React | Angular )';
+let searchQuery = '(React * Angular) | python';
 console.log('Searching: ' + searchQuery);
 search(searchQuery);
