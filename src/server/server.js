@@ -93,6 +93,11 @@ mongo_client.connect(process.env.MONGO_URI, function(err, database) {
     const {userID} = req.body;
     getResumeSkillsByUserID(userID, db, res);
   })
+
+  app.post('/updateResumeSkills', (req, res) => {
+    const {userID, skills} = req.body;
+    updateResumeSkillsByUserID(userID, skills, db, res);
+  })
   
   app.listen(port, () => {
     console.log(`Listening on *:${port}`);
@@ -112,6 +117,23 @@ function getResumeSkillsByUserID(userID, db, res) {
       })
     } else {
       res.json({skills: []});
+    }
+  })
+}
+
+// Update resume skills
+function updateResumeSkillsByUserID(userID, skills, db, res) {
+  // Filter skills to ensure no duplicates
+  skills = (skills && Array.isArray(skills)) ? skills.filter(skill => skill).map(skill => `${skill}`) : [];
+  db.collection("employees").findOne({userID}).then(employee => {
+    if (employee && employee.resume) {
+      db.collection("resumes").updateOne({_id: employee.resume}, {
+        $set: {skills}
+      }).then(() => {
+        getResumeSkillsByUserID(userID, db, res)
+      })
+    } else {
+      getResumeSkillsByUserID(userID, db, res);
     }
   })
 }
