@@ -43,6 +43,7 @@ Set.prototype.union = function (otherSet) {
   return unionSet;
 };
 
+// Function adapted from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set
 Set.prototype.symmetricDifference = function (otherSet) {
   let _difference = new Set(this);
   for (let elem of otherSet) {
@@ -52,6 +53,13 @@ Set.prototype.symmetricDifference = function (otherSet) {
       _difference.add(elem);
     }
   }
+  return _difference;
+};
+
+// Function adapted from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set
+Set.prototype.difference = function (otherSet) {
+  let _difference = new Set(this);
+  for (let elem of otherSet) _difference.delete(elem);
   return _difference;
 };
 
@@ -75,23 +83,46 @@ function parseString(group) {
   };
 
   // Select skill tokens from raw chunk
-  tokenSelect = /([\w\d!.\$][\w\d .+-]*[\w\d\$+-.])|(?<=[ \|&\*])\w(?=[ \|&\*])|(?<=[ \|&\*])\w|\w(?=[ \|&\*])/gi;
+  tokenSelect = /([\w\d!.\$][\w\d .+\$-]*[\w\d\$+-.])|(?<=[ \|&\*])\w(?=[ \|&\*])|(?<=[ \|&\*])\w|\w(?=[ \|&\*])/gi;
   group = group.replace(/! /g, '!');
   tokens = group.match(tokenSelect);
   // If tokens were selected, parse and store
   if (tokens != null)
     tokens.map((token) => {
       let component = {};
-      component.token = token;
       component.isMacro = /\$\d*\$/g.test(token);
+      component.isNegated = /!/g.test(token);
+      if (component.isNegated) token = token.replace(/!/g, '');
+      component.token = token;
       searchParams.components.push(component);
     });
 
   searchParams.containsMacros = /\$\d*\$/g.test(group);
 
-  if (/&/g.test(group)) searchParams.operation = 'and';
-  else if (/\|/g.test(group)) searchParams.operation = 'or';
-  else if (/\*/g.test(group)) searchParams.operation = 'xor';
+  let containsAnd = false,
+    containsOr = false,
+    containsXor = false;
+
+  containsAnd = /&/g.test(group) ? 1 : 0;
+  containsOr = /\|/g.test(group) ? 1 : 0;
+  containsXor = /\*/g.test(group) ? 1 : 0;
+
+  if (
+    !(containsAnd ^ containsOr ^ containsXor) &&
+    searchParams.components.length == 1 &&
+    /\$\d*\$/g.test(searchParams.components[0].token)
+  )
+    return { status: -1, message: 'ERROR: Malformed query -- Mixed operators' };
+
+  if (containsAnd) searchParams.operation = 'and';
+  else if (containsOr) searchParams.operation = 'or';
+  else if (containsXor) searchParams.operation = 'xor';
+  else if (searchParams.components.length != 1)
+    return {
+      status: -1,
+      message: 'ERROR: Malformed request -- Missing operator',
+    };
+  else searchParams.operation = 'or';
 
   return searchParams;
 }
@@ -160,21 +191,32 @@ function parseQuery(query) {
 // Function which takes in a parsed query obj and calculates the query from mongo
 async function handleQuery(queryObj) {
   var respTable = {};
-  var keys = [];
   var macrosTable = {};
-
+  var keys = [];
+  var negKeys = [];
   var response = {};
 
+  let errorRet = null;
+
   // Construct initial lookup tables
-  queryObj.map((obj) => {
+  for (let i = 0; i < queryObj.length; i++) {
+    let obj = queryObj[i];
+    if (obj.ops.status !== undefined) {
+      errorRet = obj.ops;
+      break;
+    }
     obj.ops.components.map((component) => {
-      if (!component.isMacro) keys.push(component.token);
+      if (!component.isMacro && !component.isNegated)
+        keys.push(component.token);
+      if (component.isNegated) negKeys.push(component.token);
       else macrosTable[component.token] = null;
     });
-  });
+  }
+
+  if (errorRet != null) return errorRet;
 
   // Grab resume _id's from mongo with the keyset
-  const fetchFromMongo = async (tokenArr) => {
+  const fetchFromMongo = async (tokenArr, negation = false) => {
     const mongoClient = new MongoClient(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -184,8 +226,13 @@ async function handleQuery(queryObj) {
 
     try {
       await mongoClient.connect();
-      let mgdbQueryObj = { $or: [] };
-      tokenArr.map((t) => mgdbQueryObj['$or'].push({ name: t }));
+
+      // Construct mongoDB query object if needed
+      let mgdbQueryObj = {};
+      if (!negation) {
+        mgdbQueryObj = { $or: [] };
+        tokenArr.map((t) => mgdbQueryObj['$or'].push({ name: t }));
+      }
       mgdbRetObj = await mongoClient
         .db('resume_org')
         .collection('searchTesting')
@@ -200,7 +247,7 @@ async function handleQuery(queryObj) {
   };
 
   // Parse mongo response into sets and store
-  var resp = await fetchFromMongo(keys);
+  var resp = await fetchFromMongo(keys, negKeys.length != 0);
   if (resp.length == 0) {
     response.status = -1;
     response.message = 'ERROR: No valid skills provided';
@@ -212,6 +259,7 @@ async function handleQuery(queryObj) {
   // Recursivly calculate a chunk, starting with non-macro chunks and working up to the root chunk.
   const resolveChunk = (chunk) => {
     // If chunk has unresolved macros, first resolve before continuing
+
     chunk.ops.components.map((component) => {
       if (component.isMacro && macrosTable[component.token] == null) {
         let nextChunkIDX = component.token.slice(1, component.token.length - 1);
@@ -220,15 +268,33 @@ async function handleQuery(queryObj) {
     });
 
     // Construct return set and calculate chunk
-    let chunkResp = null;
+    let chunkResp = null; // Return variable, set of all valid resume IDs for chunk
+    let completeResumeSet = null; // Set containing all resume documents
     chunk.ops.components.map((component) => {
+      // If evaluating a negated component and we have not already done so, construct the master skill set
+      if (component.isNegated && completeResumeSet == null) {
+        completeResumeSet = new Set();
+        Object.keys(respTable).map(
+          (respKey) =>
+            (completeResumeSet = completeResumeSet.union(respTable[respKey]))
+        );
+      }
+
       if (chunkResp == null) {
         chunkResp = component.isMacro
-          ? macrosTable[component.token]
+          ? component.isNegated
+            ? completeResumeSet.difference(macrosTable[component.token])
+            : macrosTable[component.token]
+          : component.isNegated
+          ? completeResumeSet.difference(respTable[component.token])
           : respTable[component.token];
       } else {
         let comparisonSet = component.isMacro
-          ? macrosTable[component.token]
+          ? component.isNegated
+            ? completeResumeSet.difference(macrosTable[component.token])
+            : macrosTable[component.token]
+          : component.isNegated
+          ? completeResumeSet.difference(respTable[component.token])
           : respTable[component.token];
 
         if (comparisonSet == null) comparisonSet = new Set();
@@ -280,6 +346,6 @@ const search = async (searchString) => {
   return response;
 };
 
-let searchQuery = 'ReAct';
+let searchQuery = '(React * Angular) | python';
 console.log('Searching: ' + searchQuery);
 search(searchQuery);
