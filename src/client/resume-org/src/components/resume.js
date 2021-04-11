@@ -22,6 +22,9 @@ const styles = theme => ({
   skillField: {
     margin: "10px",
   },
+  skillTypography: {
+    padding: "0 20px",
+  },
 });
 
 class Resume extends Component {
@@ -139,7 +142,7 @@ class Resume extends Component {
       <PageBody>
         {skills && skills.length > 0 && <Card>
           <Typography variant="h5" align="center">What we've parsed:</Typography>
-          <Typography variant="h6">
+          <Typography variant="h6" className={classes.skillTypography}>
             Skills: 
           </Typography>
           <Grid container alignItems="center">
@@ -174,8 +177,8 @@ class Resume extends Component {
             </> : skills.map(skill =>  
               <Grid item xs={3}>
                 <Typography 
-                // align="center"
-                >{skill}</Typography>
+                  className={classes.skillTypography}
+                >{"\u25CF"} {skill}</Typography>
               </Grid>
             )}
           </Grid>
