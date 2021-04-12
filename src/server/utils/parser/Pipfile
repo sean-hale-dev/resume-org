@@ -17,6 +17,7 @@ pyresparser = "*"
 resumeparser = {editable = true, path = "."}
 pymongo = "*"
 pytest = "*"
+textract = "*"
 
 [dev-packages]
 neovim = "*"
