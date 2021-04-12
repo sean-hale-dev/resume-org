@@ -10,6 +10,7 @@ const path = require('path');
 const mongo_client = require('mongodb');
 // import search from './search.js';
 const search = require('./utils/search.js');
+const { strict } = require('assert');
 
 
 // TODO: ADD AUTHENTICATION
@@ -104,6 +105,45 @@ mongo_client.connect(process.env.MONGO_URI, function(err, database) {
   });
 });
 
+// Validate search query
+function validateSearchQueryParentheses(queryString) {
+  if (typeof queryString !== 'string') {
+    return false;
+  }
+  let parenthesisTracker = 0;
+  for (let i = 0; i < queryString.length; i++) {
+    const char = queryString.charAt(i);
+    if (char == ")") parenthesisTracker--;
+    if (char == "(") parenthesisTracker++;
+    if (parenthesisTracker < 0) return false;
+  }
+  return parenthesisTracker == 0;
+}
+
+function validateSearchQueryMacros(queryString) {
+  const regExpMacro = /\$\d*\$/;
+  const queryStringMacros = queryString.match(regExpMacro);
+  console.log(queryStringMacros);
+  return !queryStringMacros || queryStringMacros.length == 0;
+}
+
+// validateSearchQueryMacros("Simple String");
+// validateSearchQueryMacros("Simple String$100");
+// validateSearchQueryMacros("Simple String$100$eeee");
+// validateSearchQueryMacros("Simple String$100e$eeee");
+// validateSearchQueryMacros("Simple String$100$ee$24342$ee");
+// validateSearchQueryMacros("Simple String$10er0$ee$24342$ee");
+// validateSearchQueryMacros("Simple String$10er0$0$24342e$ee");
+
+function validateSearchQuery(queryString) {
+  const parenthesesGood = validateSearchQueryParentheses(queryString);
+  const macrosGood = validateSearchQueryMacros(queryString);
+  const issues = [];
+  if (!parenthesesGood) issues.push("Mismatched parentheses");
+  if (!macrosGood) issues.push("Query contains a problematic search macro");
+  return {good: issues.length == 0, issues};
+}
+
 // Fetch resume skills by userID
 function getResumeSkillsByUserID(userID, db, res) {
   db.collection("employees").findOne({userID}).then(employee => {
@@ -174,7 +214,18 @@ function updateProfile(userID, details, db, res) {
 
 // Searches for resumes matching queryString
 function resumeSearch(searchString, db, res) {
+  const validation = validateSearchQuery(searchString);
+  if (!validation.good) {
+    console.log(`Search validation errors: ${validation.issues.join(", ")}`);
+    res.json([]);
+    return;
+  }
   search.search(searchString).then(resumeIDSet => {
+    if (resumeIDSet.status == -1) {
+      console.log(`${searchString} issue: ${resumeIDSet.message}`);
+      res.json([]);
+      return;
+    }
     const resumeGetPromises = [...resumeIDSet.payload].map(id => db.collection("resumes").findOne({_id: id}));
     
     Promise.all(resumeGetPromises).then(resumes => {
@@ -293,11 +344,6 @@ function sendResumeArrayToClient(resume_list, res) {
 }
 
 function parseResume(res, args, db, deleteFile, allCurrentKeys, file_type) {
-  // TEMP:
-  TEMP_SKILLS = ["angular", "react", "javascript"];
-  res.json(TEMP_SKILLS);
-  return;
-
   var process = child_process.spawn('resumeParser', args);
 
   console.log('Resume being parsed - awaiting results');
