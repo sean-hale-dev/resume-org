@@ -13,7 +13,7 @@ const search = require('./utils/search.js');
 
 // TODO: ADD AUTHENTICATION
 
-mongo_client.connect(process.env.MONGO_URI, function (err, database) {
+mongo_client.connect(process.env.MONGO_URI, { useUnifiedTopology: true }, function (err, database) {
   if (err) throw err;
 
   var db = database.db('resume_org');
@@ -319,7 +319,7 @@ function updateSkillAssoc(db, skills_json, resume_id) {
   );
 }
 
-// pulls a resume document from the database by its _id
+// pulls a resume document from the database by its _id (ObjectID, not string)
 function getResume(db, resume_id) {
   return new Promise((resolve, reject) => {
     db.collection('resumes')
@@ -353,20 +353,22 @@ function sendResumeArrayToClient(resume_list, res) {
   res.json({ resumes: resume_list });
 }
 
+// sends the resume file through the parser and sends the JSON of skills back to the client
 function parseResume(res, args, db, deleteFile, allCurrentKeys, file_type, userID) {
   var process = child_process.spawn('resumeParser', args);
 
   console.log('Resume being parsed - awaiting results');
   process.stdout.on('data', function (data) {
     console.log(`data.toString(): ${data.toString()}`);
-    if (data.toString().includes(' 0 skills')) {
-      res.send(
-        'No skills were found in the uploaded resume. Resume not saved.'
-      );
-    }
     if (data.toString().charCodeAt(0) != 27) {
       var skills_json = data.toString().split(' skills:\n')[1];
-
+      if(skills_json.charCodeAt(0) == 115){
+        res.send(
+          'No skills were found in the uploaded resume. Resume not saved.'
+        );
+        console.log("No skills found in resume");
+        return;
+      }
       // make the string valid JSON
       skills_json = [
         skills_json.slice(0, 1),
