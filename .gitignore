@@ -7,3 +7,4 @@ src/resumeParser/dist
 *package-lock.json
 *node_modules
 .env
+*vimspector.json

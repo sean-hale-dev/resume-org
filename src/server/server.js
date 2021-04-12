@@ -9,7 +9,7 @@ const child_process = require('child_process');
 const path = require('path');
 const mongo_client = require('mongodb');
 // import search from './search.js';
-const search = require('./search.js');
+const search = require('./utils/search.js');
 
 
 // TODO: ADD AUTHENTICATION
@@ -175,7 +175,7 @@ function updateProfile(userID, details, db, res) {
 // Searches for resumes matching queryString
 function resumeSearch(searchString, db, res) {
   search.search(searchString).then(resumeIDSet => {
-    const resumeGetPromises = [...resumeIDSet].map(id => db.collection("resumes").findOne({_id: id}));
+    const resumeGetPromises = [...resumeIDSet.payload].map(id => db.collection("resumes").findOne({_id: id}));
     
     Promise.all(resumeGetPromises).then(resumes => {
       const resumeData = resumes.map(resume => ({
