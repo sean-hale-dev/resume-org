@@ -34,7 +34,19 @@ mongo_client.connect(process.env.MONGO_URI, function (err, database) {
 
   app.post('/resume-upload', (req, res) => {
     var form = new formidable.IncomingForm();
-    form.parse(req);
+    var userID;
+    form.parse(req, (err, fields, files) => {
+      if (err) {
+        console.error(err);
+        return;
+      }
+      if(fields.userID) {
+        userID = fields.userID;
+      }
+      else {
+        userID = "TestUser";
+      }
+    });
 
     form.on('fileBegin', function (name, file) {
       file.path = `${__dirname}/resumes/${file.name}`;
@@ -47,7 +59,7 @@ mongo_client.connect(process.env.MONGO_URI, function (err, database) {
         console.log('Get keys - promise done:');
         allCurrentKeys = result.map((doc) => doc.name);
         console.log(allCurrentKeys);
-        parseResume(res, [file.path], db, true, allCurrentKeys, file.type);
+        parseResume(res, [file.path], db, true, allCurrentKeys, file.type, userID);
       });
     });
   });
@@ -222,12 +234,12 @@ function resumeSearch(searchString, db, res) {
 }
 
 // uploads a resume as a new document in the "resumes" collection in the database
-function dbUpload(db, file_data, skills_json, file_type) {
+function dbUpload(db, file_data, skills_json, file_type, userID) {
   var db_upload = {
     resume: file_data,
     type: file_type,
     skills: skills_json.skills,
-    employee: 'Test Employee',
+    employee: userID,
   };
   return new Promise((resolve, reject) => {
     db.collection('resumes').insertOne(db_upload, function (err, res) {
@@ -341,7 +353,7 @@ function sendResumeArrayToClient(resume_list, res) {
   res.json({ resumes: resume_list });
 }
 
-function parseResume(res, args, db, deleteFile, allCurrentKeys, file_type) {
+function parseResume(res, args, db, deleteFile, allCurrentKeys, file_type, userID) {
   var process = child_process.spawn('resumeParser', args);
 
   console.log('Resume being parsed - awaiting results');
@@ -375,7 +387,7 @@ function parseResume(res, args, db, deleteFile, allCurrentKeys, file_type) {
 
       // upload file and skills to database
       var file_data = fs.readFileSync(args[0]);
-      dbUpload(db, file_data, skills_json, file_type).then((resume_id) => {
+      dbUpload(db, file_data, skills_json, file_type, userID).then((resume_id) => {
         console.log(resume_id);
 
         insertNewSkills(db, allCurrentKeys, skills_json)

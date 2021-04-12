@@ -82,6 +82,7 @@ class Resume extends Component {
       );
       var formData = new FormData();
       formData.append('resume', this.state.resumeFile);
+      formData.append('userID', this.props.userID);
       axios
         .post(
           `http://${window.location.hostname}:8080/resume-upload`,
