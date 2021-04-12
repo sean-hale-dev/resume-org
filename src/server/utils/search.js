@@ -125,10 +125,9 @@ function parseString(group) {
   else if (containsOr) searchParams.operation = 'or';
   else if (containsXor) searchParams.operation = 'xor';
   else if (searchParams.components.length != 1) {
-    console.log(JSON.stringify(searchParams, 0, 2));
     return {
       status: -1,
-      message: 'ERROR: Malformed request -- Missing operator',
+      message: 'ERROR: Malformed query -- Missing operator',
     };
   } else searchParams.operation = 'or';
 
@@ -355,8 +354,8 @@ const search = async (searchString) => {
   return response;
 };
 
-let searchQuery = 'c';
-console.log('Searching: ' + searchQuery);
-search(searchQuery);
+// let searchQuery = 'c++';
+// console.log('Searching: ' + searchQuery);
+// search(searchQuery);
 
 exports.search = search;
