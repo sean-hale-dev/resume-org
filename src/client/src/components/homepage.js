@@ -8,8 +8,9 @@ class Home extends Component {
   }
 
   render () {
+    const {userID} = this.props;
     return (<>
-      <Header selectedPage="Home" />
+      <Header selectedPage="Home" userID={userID}/>
     </>);
   }
 }

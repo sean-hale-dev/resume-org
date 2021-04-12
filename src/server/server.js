@@ -8,6 +8,10 @@ const formidable = require('formidable');
 const child_process = require('child_process');
 const path = require('path');
 const mongo_client = require('mongodb');
+// import search from './search.js';
+const search = require('./utils/search.js');
+
+// TODO: ADD AUTHENTICATION
 
 mongo_client.connect(process.env.MONGO_URI, function (err, database) {
   if (err) throw err;
@@ -48,6 +52,12 @@ mongo_client.connect(process.env.MONGO_URI, function (err, database) {
     });
   });
 
+  app.post('/resume-search', (req, res) => {
+    console.log('Searching');
+    const queryString = req.body.queryString || ' (c | c) ';
+    resumeSearch(queryString, db, res);
+  });
+
   app.get('/resume-download', (req, res) => {
     // file path hard-coded for testing purposes
     if (req.query.type == 'pdf') {
@@ -65,10 +75,151 @@ mongo_client.connect(process.env.MONGO_URI, function (err, database) {
     }
   });
 
+  app.post('/login', (req, res) => {
+    const { userID } = req.body;
+    console.log(`Logging in ${userID}`);
+    handleLogin(userID, db, res);
+  });
+
+  app.post('/getProfile', (req, res) => {
+    const { userID } = req.body;
+    getProfile(userID, db, res);
+  });
+
+  app.post('/updateProfile', (req, res) => {
+    const { userID, details } = req.body;
+    updateProfile(userID, details, db, res);
+  });
+
+  app.post('/getResumeSkills', (req, res) => {
+    const { userID } = req.body;
+    getResumeSkillsByUserID(userID, db, res);
+  });
+
+  app.post('/updateResumeSkills', (req, res) => {
+    const { userID, skills } = req.body;
+    updateResumeSkillsByUserID(userID, skills, db, res);
+  });
+
   app.listen(port, () => {
     console.log(`Listening on *:${port}`);
   });
 });
+
+// Fetch resume skills by userID
+function getResumeSkillsByUserID(userID, db, res) {
+  db.collection('employees')
+    .findOne({ userID })
+    .then((employee) => {
+      if (employee && employee.resume) {
+        db.collection('resumes')
+          .findOne({ _id: employee.resume })
+          .then((resume) => {
+            if (resume && resume.skills) {
+              res.json({ skills: resume.skills });
+            } else {
+              res.json({ skills: [] });
+            }
+          });
+      } else {
+        res.json({ skills: [] });
+      }
+    });
+}
+
+// Update resume skills
+function updateResumeSkillsByUserID(userID, skills, db, res) {
+  // Filter skills to ensure no duplicates
+  skills =
+    skills && Array.isArray(skills)
+      ? skills.filter((skill) => skill).map((skill) => `${skill}`)
+      : [];
+  db.collection('employees')
+    .findOne({ userID })
+    .then((employee) => {
+      if (employee && employee.resume) {
+        db.collection('resumes')
+          .updateOne(
+            { _id: employee.resume },
+            {
+              $set: { skills },
+            }
+          )
+          .then(() => {
+            getResumeSkillsByUserID(userID, db, res);
+          });
+      } else {
+        getResumeSkillsByUserID(userID, db, res);
+      }
+    });
+}
+
+// Handle user login
+function handleLogin(userID, db, res) {
+  db.collection('employees')
+    .findOne({ userID })
+    .then((employee) => {
+      if (employee) {
+        res.json(employee);
+      } else {
+        db.collection('employees')
+          .insertOne({ userID })
+          .then(() => res.json({ userID }));
+      }
+    });
+}
+
+function getProfile(userID, db, res) {
+  db.collection('employees')
+    .findOne({ userID })
+    .then((employee) => {
+      employeeData = {
+        userID,
+        position: employee.position || '',
+        name: employee.name || '',
+        yearsExperience: employee.yearsExperience || false,
+      };
+      res.json(employeeData);
+    });
+}
+
+// TODO: This should *definitely* have authentication
+function updateProfile(userID, details, db, res) {
+  const updates = {};
+  if (details.name !== undefined) updates.name = details.name;
+  if (details.position !== undefined) updates.position = details.position;
+  if (details.yearsExperience !== undefined)
+    updates.yearsExperience = details.yearsExperience;
+  db.collection('employees')
+    .updateOne(
+      { userID },
+      {
+        $set: updates,
+      }
+    )
+    .then(() => getProfile(userID, db, res));
+}
+
+// Searches for resumes matching queryString
+function resumeSearch(searchString, db, res) {
+  search.search(searchString).then((resumeIDSet) => {
+    const resumeGetPromises = [...resumeIDSet.payload].map((id) =>
+      db.collection('resumes').findOne({ _id: id })
+    );
+
+    Promise.all(resumeGetPromises).then((resumes) => {
+      const resumeData = resumes.map((resume) => ({
+        _id: (resume && resume._id) || false,
+        type: (resume && resume.type) || false,
+        skills: (resume && resume.skills) || [],
+        employee: (resume && resume.employee) || false,
+        experience: (resume && resume.yearsExperience) || false,
+        position: (resume && resume.position) || false,
+      }));
+      res.json(resumeData);
+    });
+  });
+}
 
 // uploads a resume as a new document in the "resumes" collection in the database
 function dbUpload(db, file_data, skills_json, file_type) {

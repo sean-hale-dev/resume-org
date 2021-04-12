@@ -82,6 +82,9 @@ function parseString(group) {
     components: [],
   };
 
+  // This is a really dumb little thing that checks to see if the query string is only one character and if so append a space so the tokenSelect will select it
+  if (group.length == 1) group += ' ';
+
   // Select skill tokens from raw chunk
   tokenSelect = /([\w\d!.\$][\w\d .+\$-]*[\w\d\$+-.])|(?<=[ \|&\*])\w(?=[ \|&\*])|(?<=[ \|&\*])\w|\w(?=[ \|&\*])/gi;
   group = group.replace(/! /g, '!');
@@ -96,6 +99,11 @@ function parseString(group) {
       component.token = token;
       searchParams.components.push(component);
     });
+  else
+    return {
+      status: -1,
+      message: 'ERROR: Missing search token(s)',
+    };
 
   searchParams.containsMacros = /\$\d*\$/g.test(group);
 
@@ -109,20 +117,19 @@ function parseString(group) {
 
   if (
     !(containsAnd ^ containsOr ^ containsXor) &&
-    searchParams.components.length == 1 &&
-    /\$\d*\$/g.test(searchParams.components[0].token)
+    containsAnd | containsOr | containsXor
   )
     return { status: -1, message: 'ERROR: Malformed query -- Mixed operators' };
 
   if (containsAnd) searchParams.operation = 'and';
   else if (containsOr) searchParams.operation = 'or';
   else if (containsXor) searchParams.operation = 'xor';
-  else if (searchParams.components.length != 1)
+  else if (searchParams.components.length != 1) {
     return {
       status: -1,
-      message: 'ERROR: Malformed request -- Missing operator',
+      message: 'ERROR: Malformed query -- Missing operator',
     };
-  else searchParams.operation = 'or';
+  } else searchParams.operation = 'or';
 
   return searchParams;
 }
@@ -255,6 +262,7 @@ async function handleQuery(queryObj) {
   }
 
   resp.map((respObj) => (respTable[respObj.name] = new Set(respObj.resumes)));
+  console.log(resp);
 
   // Recursivly calculate a chunk, starting with non-macro chunks and working up to the root chunk.
   const resolveChunk = (chunk) => {
@@ -346,6 +354,8 @@ const search = async (searchString) => {
   return response;
 };
 
-let searchQuery = '(React * Angular) | python';
-console.log('Searching: ' + searchQuery);
-search(searchQuery);
+// let searchQuery = 'c++';
+// console.log('Searching: ' + searchQuery);
+// search(searchQuery);
+
+exports.search = search;

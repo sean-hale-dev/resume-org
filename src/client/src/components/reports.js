@@ -35,9 +35,9 @@ class Reports extends Component {
   }
 
   render () {
-    const { classes } = this.props;
+    const { classes, userID } = this.props;
     return (<>
-      <Header selectedPage="Reports" />
+      <Header selectedPage="Reports" userID={userID}/>
       <PageBody>
         <Card>
           <Toolbar className={classes.searchToolbar}>
