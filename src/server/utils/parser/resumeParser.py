@@ -1,16 +1,8 @@
-from pdfminer.converter import TextConverter
-from pdfminer.layout import LAParams
-from pdfminer.pdfdocument import PDFDocument
-from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
-from pdfminer.pdfpage import PDFPage
-from pdfminer.pdfparser import PDFParser
-from io import StringIO 
+import json, os, pprint, time, warnings
+import click, docx2txt, nltk, requests, pymongo, textract
+from requests_threads import AsyncSession
 from alive_progress import alive_bar 
 from pyresparser import ResumeParser
-
-import json, os, pprint, time, warnings
-import click, docx2txt, nltk, requests, pymongo
-from requests_threads import AsyncSession
 
 # Surpress spacy warnings
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -199,43 +191,6 @@ async def asyncAPICheck():
 
     UNKNOWNS = ret
 
-
-# Extract the text from the input document
-def fetchTextPDF(filename):
-    '''
-    Extract text from a pdf document
-
-    Parameters:
-        filename (string): The PDF document to extract text from
-
-    Returns:
-        String: The extracted text
-    '''
-    output_string = StringIO()
-    with open(filename, 'rb') as f:
-        parser = PDFParser(f)
-        doc = PDFDocument(parser)
-        rsrcmgr = PDFResourceManager()
-        device = TextConverter(rsrcmgr, output_string, laparams=LAParams())
-        interpreter = PDFPageInterpreter(rsrcmgr, device)
-        for page in PDFPage.create_pages(doc):
-            interpreter.process_page(page)
-
-    return str(output_string.getvalue())
-
-def fetchTextDocX(filename):
-    '''
-    Extract text from a docx document
-
-    Parameters:
-        filename (string): The docx document to extract text from
-
-    Returns:
-        String: The extracted text
-    '''
-
-    return docx2txt.process(filename)
-
 def extract_skills(corpus, filename):
     '''
     Parses a string to extract resume skills
@@ -304,13 +259,8 @@ def cli(resumefile, install):
         
     resumefileExt = resumefile.split('.')[-1].lower()
 
-    text = None
-
-    if resumefileExt == "pdf": text = fetchTextPDF(resumefile)
-    elif resumefileExt == "docx": text = fetchTextDocX(resumefile)
-    else:
-        click.echo(f"ERROR: Unsupported filetype .{resumefileExt}")
-        return
+    text = textract.process(resumefile) 
+    text = text.decode('utf-8')
 
     if not text:
         click.echo(f"ERROR: Something went wrong, we're unable to extract your resume data")
