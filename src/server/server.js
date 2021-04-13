@@ -13,7 +13,7 @@ const search = require('./utils/search.js');
 
 // TODO: ADD AUTHENTICATION
 
-mongo_client.connect(process.env.MONGO_URI, { useUnifiedTopology: true }, function (err, database) {
+mongo_client.connect(process.env.MONGO_SERVER_URI, { useUnifiedTopology: true }, function (err, database) {
   if (err) throw err;
 
   var db = database.db('resume_org');
