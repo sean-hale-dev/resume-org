@@ -35,17 +35,11 @@ mongo_client.connect(process.env.MONGO_SERVER_URI, { useUnifiedTopology: true },
   app.post('/resume-upload', (req, res) => {
     var form = new formidable.IncomingForm();
     var userID;
-    form.parse(req, (err, fields, files) => {
-      if (err) {
-        console.error(err);
-        return;
-      }
-      if(fields.userID) {
-        userID = fields.userID;
-      }
-      else {
-        userID = "TestUser";
-      }
+    form.parse(req);
+    
+    form.on('field', (fieldName, fieldValue) => {
+      if(fieldName == "userID")
+        userID = fieldValue;
     });
 
     form.on('fileBegin', function (name, file) {
@@ -54,12 +48,48 @@ mongo_client.connect(process.env.MONGO_SERVER_URI, { useUnifiedTopology: true },
 
     form.on('file', function (name, file) {
       console.log(`File uploaded - "${file.path}"`);
-
-      dbGetKeys(db).then((result) => {
-        console.log('Get keys - promise done:');
-        allCurrentKeys = result.map((doc) => doc.name);
-        console.log(allCurrentKeys);
-        parseResume(res, [file.path], db, true, allCurrentKeys, file.type, userID);
+      if(userID == undefined) {
+        userID = "UserTest";
+      }
+      
+      db.collection("resumes").findOne({ "employee": userID }, (err, result) => {
+        console.log("Username:",userID);
+        
+        // user never uploaded a resume before - run it through the parser
+        if(result == null) {
+          console.log("It is a new resume - add it to the database");
+          
+          dbGetKeys(db).then((result) => {
+            console.log('Get keys - promise done:');
+            allCurrentKeys = result.map((doc) => doc.name);
+            console.log(allCurrentKeys);
+            parseResume(res, [file.path], db, true, allCurrentKeys, file.type, userID);
+          });
+        }
+        // user already uploaded a resume - remove the old one before running new one through the parser
+        else {
+          console.log("It is an updated resume");
+          var id = result["_id"];
+          
+          // remove the original resume's ObjectId from the skill_assoc lists
+          db.collection("skill_assoc").updateMany(
+            { name: { $in: [...result["skills"]] } },
+            { $pull : { resumes: id } },
+            (err, updatedDocs) => {
+              // remove the original resume
+              db.collection("resumes").deleteOne({_id: id}, (err, removedResult) => {
+                if(err) console.error(err);
+              })
+            }
+          );
+          // now that the old resume has been removed from the database, put the new one in
+          dbGetKeys(db).then((result) => {
+            console.log('Get keys - promise done:');
+            allCurrentKeys = result.map((doc) => doc.name);
+            console.log(allCurrentKeys);
+            parseResume(res, [file.path], db, true, allCurrentKeys, file.type, userID);
+          });
+        }
       });
     });
   });
