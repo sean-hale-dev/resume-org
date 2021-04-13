@@ -102,10 +102,27 @@ mongo_client.connect(process.env.MONGO_URI, function (err, database) {
     updateResumeSkillsByUserID(userID, skills, db, res);
   });
 
+  app.get('/getAllSearchableSkills', (req, res) => {
+    getAllSearchableSkills(db, res);
+  })
+
   app.listen(port, () => {
     console.log(`Listening on *:${port}`);
   });
 });
+
+// Get list of all skills for searching
+function getAllSearchableSkills(db, res) {
+  db.collection('skill_assoc').find({name: {$exists: true}}).toArray((err, results) => {
+    if (err) {
+      res.json([]);
+    } else {
+      const skills = results.map(result => result.name);
+      // console.log(skills);
+      res.json(skills);
+    }
+  })
+}
 
 // Validate search query
 function validateSearchQueryParentheses(queryString) {

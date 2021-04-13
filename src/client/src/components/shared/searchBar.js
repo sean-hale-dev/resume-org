@@ -73,7 +73,7 @@ function validateSearchQueryParentheses(queryString) {
 function validateSearchQueryMacros(queryString) {
   const regExpMacro = /\$\d*\$/;
   const queryStringMacros = queryString.match(regExpMacro);
-  console.log(queryStringMacros);
+  // console.log(queryStringMacros);
   return !queryStringMacros || queryStringMacros.length == 0;
 }
 
@@ -98,8 +98,15 @@ class SearchBar extends Component {
 
   componentDidMount() {
     // TODO: Call server for this
-    const searchOptions = ["python", "angular", "react", "c", "d", "js", "mips assembly"];
-    this.setState({searchOptions}, this.updateSearchOptions);
+    // const searchOptions = ["python", "angular", "react", "c", "d", "js", "mips assembly"];
+    // this.setState({searchOptions}, this.updateSearchOptions);
+    axios.get(`http://${window.location.hostname}:8080/getAllSearchableSkills`).then(res => {
+      if (res && Array.isArray(res.data)) {
+        const skills = res.data;
+        console.log(skills);
+        this.setState({searchOptions: Array.isArray(skills) ? skills.sort() : []}, this.updateSearchOptions);
+      }
+    })
   }
 
   getLastTerm(searchText) {
@@ -129,6 +136,13 @@ class SearchBar extends Component {
   onSearchChange(event, newValue, reason) {
     // console.log(`Change ${reason}; newVal ${newValue}`);
     if (reason == "select-option") {
+      // Handle yet another odd edge case caused by poor autocomplete behavior
+      if (newValue === undefined) {
+        const {searchText} = this.state;
+        // console.log(`Undefined detected; searchText: ${searchText}`);
+        this.setState({searchText: ""}, () => this.setState({searchText}));
+        return;
+      }
       // Cut last search term and replace
       const {searchText} = this.state;
       const lastTerm = this.getLastTerm(searchText);
