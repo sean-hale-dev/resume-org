@@ -105,9 +105,9 @@ mongo_client.connect(process.env.MONGO_SERVER_URI, { useUnifiedTopology: true },
     // if searching by ObjectId
     if (req.query.id) {
       getResumeByID(db, mongo_client.ObjectId(req.query.id)).then(resume => {
-        downloadResumeToServer(db, resume.resume, getExtFromType(resume.type));
+        var download_path = downloadResumeToServer(db, resume.resume, getExtFromType(resume.type), resume.employee);
         console.log(`File redownloaded to server from database`);
-        sendResumeDownloadToClient(`${__dirname}/resumes/resume_download${getExtFromType(resume.type)}`, res);
+        sendResumeDownloadToClient(download_path, res);
       }).catch(() => {
         console.log(`No resume found with _id = ${req.query.id}`)
       });
@@ -115,9 +115,9 @@ mongo_client.connect(process.env.MONGO_SERVER_URI, { useUnifiedTopology: true },
     // if searching by employee
     else if (req.query.employee) {
       getResumeByEmployee(db, req.query.employee).then(resume => {
-        downloadResumeToServer(db, resume.resume, getExtFromType(resume.type));
+        var download_path = downloadResumeToServer(db, resume.resume, getExtFromType(resume.type), resume.employee);
         console.log(`File redownloaded to server from database`);
-        sendResumeDownloadToClient(`${__dirname}/resumes/resume_download${getExtFromType(resume.type)}`, res);
+        sendResumeDownloadToClient(download_path, res);
       }).catch(() => {
         console.log(`No resume found with "employee" = ${req.query.employee}`)
       });
@@ -388,19 +388,25 @@ function getResumeByEmployee(db, employee_str) {
 }
 
 // pulls a resume from the database and stores it in src/server/resumes
-function downloadResumeToServer(db, resume_binary, file_ext) {
+function downloadResumeToServer(db, resume_binary, file_ext, employee) {
   console.log('About to write the pulled resume now');
+  var file_path = `${__dirname}/resumes/resume_download${file_ext}`;
+  if(employee != "") {
+    file_path = `${__dirname}/resumes/${employee.replaceAll(" ", "_")}_resume_download${file_ext}`;
+  }
   fs.writeFileSync(
-    `${__dirname}/resumes/resume_download${file_ext}`,
+    file_path,
     Buffer.from(resume_binary.toString('binary'), 'binary'),
     'binary'
   );
+  return file_path;
 }
 
 // sends the resume from the given file path on the server to the client as a download
 function sendResumeDownloadToClient(file_path, res) {
   res.download(file_path, (err) => {
-    console.log(err);
+    if(err) console.error(err);
+    return;
   });
 }
 
