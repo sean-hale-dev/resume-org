@@ -21,6 +21,7 @@ import PageBody from './pagebody.js';
 import { withStyles } from '@material-ui/core/styles';
 import { grey } from '@material-ui/core/colors';
 import axios from 'axios';
+import Autocomplete from '@material-ui/lab/Autocomplete';
 
 const styles = (theme) => ({
   searchField: {
@@ -54,29 +55,130 @@ const styles = (theme) => ({
   },
 });
 
+// Validate search query
+function validateSearchQueryParentheses(queryString) {
+  if (typeof queryString !== 'string') {
+    return false;
+  }
+  let parenthesisTracker = 0;
+  for (let i = 0; i < queryString.length; i++) {
+    const char = queryString.charAt(i);
+    if (char == ")") parenthesisTracker--;
+    if (char == "(") parenthesisTracker++;
+    if (parenthesisTracker < 0) return false;
+  }
+  return parenthesisTracker == 0;
+}
+
+function validateSearchQueryMacros(queryString) {
+  const regExpMacro = /\$\d*\$/;
+  const queryStringMacros = queryString.match(regExpMacro);
+  console.log(queryStringMacros);
+  return !queryStringMacros || queryStringMacros.length == 0;
+}
+
+function validateSearchQuery(queryString) {
+  const parenthesesGood = validateSearchQueryParentheses(queryString);
+  const macrosGood = validateSearchQueryMacros(queryString);
+  const issues = [];
+  if (!parenthesesGood) issues.push("Mismatched parentheses");
+  if (!macrosGood) issues.push("Query contains a problematic search macro");
+  return {good: issues.length == 0, issues};
+}
+
 class SearchBar extends Component {
   constructor(props) {
     super(props);
     this.state = {
       searchText: "",
+      searchOptions: [],
+      activeOptions: [],
     };
   }
 
-  render() {
+  componentDidMount() {
+    // TODO: Call server for this
+    const searchOptions = ["python", "angular", "react", "c", "d", "js", "mips assembly"];
+    this.setState({searchOptions}, this.updateSearchOptions);
+  }
+
+  getLastTerm(searchText) {
+    // Split string on "|", "&", "!", "*", "(", and ")"; then remove leading/trailing whitespace and remove empty terms
+    const searchTerms = searchText.toLowerCase().split(/[\|\*&!\(\)]+/).map(term => term.trim());
+    const trimmedSearchTerms = searchTerms.filter((term, index) => term || index == searchTerms.length - 1);
+    // console.log(trimmedSearchTerms);
+    const lastTerm = trimmedSearchTerms.length > 0 ? trimmedSearchTerms[trimmedSearchTerms.length - 1] : "";
+    return lastTerm;
+  }
+
+  updateSearchOptions() {
+    const {searchText, searchOptions} = this.state;
+    // console.log(`searchText: ${searchText}`);
+    const lastTerm = this.getLastTerm(searchText);
+    const activeOptions = searchOptions.filter(option => option.toLowerCase().includes(lastTerm));
+    
+    this.setState({activeOptions});
+  }
+
+  handleSearch() {
+    const {handleSearch} = this.props;
     const {searchText} = this.state;
+    handleSearch(searchText);
+  }
+
+  onSearchChange(event, newValue, reason) {
+    // console.log(`Change ${reason}; newVal ${newValue}`);
+    if (reason == "select-option") {
+      // Cut last search term and replace
+      const {searchText} = this.state;
+      const lastTerm = this.getLastTerm(searchText);
+      if (!lastTerm || searchText.lastIndexOf(lastTerm) == -1) {
+        // Handle select from empty string
+        this.setState({searchText: searchText + newValue}, this.updateSearchOptions);
+      } else {
+        const otherText = searchText.substring(0, searchText.lastIndexOf(lastTerm));
+        // The multiple setState calls are necessary to deal with a buggy Autocomplete edge case where selecting an option but not updating
+        // state causes the option to fill the text field rather than the correct controlled value. 
+        this.setState({searchText: otherText}, () => this.setState({searchText: otherText + newValue}, this.updateSearchOptions));
+      }
+    }
+  }
+
+  onSearchInputChange(event, newValue, reason) {
+    // console.log(`Change ${reason}; newVal ${newValue}`);
+    if (reason == "input") this.setState({searchText: newValue}, this.updateSearchOptions);
+    
+  }
+
+  render() {
+    const {searchText, activeOptions} = this.state;
+    // console.log(`Render searchText: ${searchText}`);
     const {classes, searchLabelText, searchButtonText} = this.props;
+    const {good, issues} = validateSearchQuery(searchText);
+
     return <Toolbar className={classes.searchToolbar}>
+      
     <Grid container justify="space-between" alignItems="center">
       <SearchIcon />
-      <TextField
-        label={searchLabelText}
-        variant="outlined"
-        type="search"
-        className={classes.searchField}
+      <Autocomplete 
+        freeSolo
+        disableClearable
+        options={activeOptions}
         value={searchText}
-        onChange={event => {this.setState({searchText: event.target.value})}}
+        className={classes.searchField}
+        onChange={(event, newValue, reason) => this.onSearchChange(event, newValue, reason)}
+        onInputChange={(event, newValue, reason) => this.onSearchInputChange(event, newValue, reason)}
+        renderInput={(params) => 
+        <TextField 
+          {...params} 
+          label={`${searchLabelText}${good ? "" : ` --- Warning: ${issues.join(", ")}`}`} 
+          margin="normal" 
+          variant="outlined" 
+          type="search"
+          error={!good}
+        />}
       />
-      <Button variant="contained" color="primary" onClick={() => {this.handleSearch()}}>
+      <Button variant="contained" color="primary" onClick={() => {this.handleSearch()}} disabled={!good}>
         {searchButtonText}
       </Button>
     </Grid>

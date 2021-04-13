@@ -21,6 +21,7 @@ import PageBody from './shared/pagebody.js';
 import { withStyles } from '@material-ui/core/styles';
 import { grey } from '@material-ui/core/colors';
 import axios from 'axios';
+import SearchBar from './shared/searchBar.js';
 
 
 const DUMMY_DATA = [
@@ -87,8 +88,8 @@ class Database extends Component {
     this.handleSearch.bind(this);
   }
 
-  handleSearch() {
-    const { searchText } = this.state;
+  handleSearch(searchText) {
+    // const { searchText } = this.state;
     console.log(`Searching for ${searchText}`);
     axios.post(`http://${window.location.hostname}:8080/resume-search`, {queryString: searchText}).then(res => {
       console.log(res);
@@ -111,22 +112,11 @@ class Database extends Component {
         <Header selectedPage="Resume Database" userID={userID}/>
         <PageBody>
           <Card>
-            <Toolbar className={classes.searchToolbar}>
-              <Grid container justify="space-between" alignItems="center">
-                <SearchIcon />
-                <TextField
-                  label="Search Resumes"
-                  variant="outlined"
-                  type="search"
-                  className={classes.searchField}
-                  value={searchText}
-                  onChange={event => {this.setState({searchText: event.target.value})}}
-                />
-                <Button variant="contained" color="primary" onClick={() => {this.handleSearch()}}>
-                  Search
-                </Button>
-              </Grid>
-            </Toolbar>
+            <SearchBar 
+              searchLabelText="Search Resumes"
+              searchButtonText="Search"
+              handleSearch={searchText => this.handleSearch(searchText)}
+            />
           </Card>
           <Card className={classes.resultsCard}>
             <Grid container alignItems="center">
