@@ -100,20 +100,31 @@ mongo_client.connect(process.env.MONGO_SERVER_URI, { useUnifiedTopology: true },
     resumeSearch(queryString, db, res);
   });
 
+  // lets the client download a resume from the database
   app.get('/resume-download', (req, res) => {
-    // file path hard-coded for testing purposes
-    if (req.query.type == 'pdf') {
-      sendResumeDownloadToClient(
-        `${__dirname}/resumes/testfilelocation.pdf`,
-        res
-      );
-    } else if (req.query.type == 'docx') {
-      sendResumeDownloadToClient(
-        `${__dirname}/resumes/testfilelocation.docx`,
-        res
-      );
-    } else {
-      res.send('Incompatible file type.');
+    // if searching by ObjectId
+    if (req.query.id) {
+      getResumeByID(db, mongo_client.ObjectId(req.query.id)).then(resume => {
+        downloadResumeToServer(db, resume.resume, getExtFromType(resume.type));
+        console.log(`File redownloaded to server from database`);
+        sendResumeDownloadToClient(`${__dirname}/resumes/resume_download${getExtFromType(resume.type)}`, res);
+      }).catch(() => {
+        console.log(`No resume found with _id = ${req.query.id}`)
+      });
+    }
+    // if searching by employee
+    else if (req.query.employee) {
+      getResumeByEmployee(db, req.query.employee).then(resume => {
+        downloadResumeToServer(db, resume.resume, getExtFromType(resume.type));
+        console.log(`File redownloaded to server from database`);
+        sendResumeDownloadToClient(`${__dirname}/resumes/resume_download${getExtFromType(resume.type)}`, res);
+      }).catch(() => {
+        console.log(`No resume found with "employee" = ${req.query.employee}`)
+      });
+    }
+    // if neither "id" nor "employee" have values set in the query string
+    else {
+      res.send(`Must search with query string "id" or "employee"`);
     }
   });
 
@@ -293,6 +304,7 @@ function dbGetKeys(db) {
   });
 }
 
+// creates a new document in the skill_assoc collection for each skill that doesn't already have one
 function insertNewSkills(db, allCurrentKeys, skills_json) {
   console.log('inserting keys here');
   var newSkills = [];
@@ -350,10 +362,23 @@ function updateSkillAssoc(db, skills_json, resume_id) {
 }
 
 // pulls a resume document from the database by its _id (ObjectID, not string)
-function getResume(db, resume_id) {
+function getResumeByID(db, resume_id) {
   return new Promise((resolve, reject) => {
     db.collection('resumes')
       .find({ _id: resume_id })
+      .toArray(function (err, result) {
+        if (err) return reject(err);
+        if (result.length == 0) return reject(err);
+        return resolve(result[0]);
+      });
+  });
+}
+
+// pulls a resume document from the database by its "employee"
+function getResumeByEmployee(db, employee_str) {
+  return new Promise((resolve, reject) => {
+    db.collection('resumes')
+      .find({ "employee": employee_str })
       .toArray(function (err, result) {
         if (err) return reject(err);
         if (result.length == 0) return reject(err);
@@ -366,7 +391,7 @@ function getResume(db, resume_id) {
 function downloadResumeToServer(db, resume_binary, file_ext) {
   console.log('About to write the pulled resume now');
   fs.writeFileSync(
-    `${__dirname}/resumes/testfilelocation${file_ext}`,
+    `${__dirname}/resumes/resume_download${file_ext}`,
     Buffer.from(resume_binary.toString('binary'), 'binary'),
     'binary'
   );
@@ -435,18 +460,6 @@ function parseResume(res, args, db, deleteFile, allCurrentKeys, file_type, userI
 
         return resume_id;
       });
-      /* this then() gets the resume back and downloads it to the server
-      .then(resume_id => {
-        getResume(db, resume_id).then(resume => {
-          downloadResumeToServer(db, resume.resume, getExtFromType(resume.type));
-          console.log(`File redownloaded to server from database`);
-          
-          // sendResumeDownloadToClient(`${__dirname}/resumes/testfilelocation${getExtFromType(resume.type)}`, res);
-        }).catch(() => {
-          console.log(`No resume found with _id = ${resume_id}`)
-        });
-      });
-      */
 
       if (deleteFile) {
         console.log(`Now deleting - "${args[0]}"`);
