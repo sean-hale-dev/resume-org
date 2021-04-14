@@ -270,6 +270,6 @@ def cli(resumefile, install):
 
     print(f"Finished tokenization and parsing -- Detected {len(skills)} skills:\n{skills}")
 
-    with open("skills_out.json", "w+") as f:
+    with open(f"{resumefile}.json", "w+") as f:
         json.dump(skills, f)
         f.close()
