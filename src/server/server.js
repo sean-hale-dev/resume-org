@@ -499,60 +499,106 @@ function parseResume(
   var process = child_process.spawn('resumeParser', args);
 
   console.log('Resume being parsed - awaiting results');
-  process.stdout.on('data', function (data) {
-    console.log(`data.toString(): ${data.toString()}`);
-    if (data.toString().charCodeAt(0) != 27) {
-      var skills_json = data.toString().split(' skills:\n')[1];
-      if (skills_json.charCodeAt(0) == 115) {
-        res.send(
-          'No skills were found in the uploaded resume. Resume not saved.'
-        );
-        console.log('No skills found in resume');
-        return;
-      }
-      // make the string valid JSON
-      skills_json = [
-        skills_json.slice(0, 1),
-        '"skills": [',
-        skills_json.slice(1),
-      ].join('');
-      skills_json = [skills_json.slice(0, -2), ']', skills_json.slice(-2)].join(
-        ''
-      );
-      skills_json = skills_json.replace(/'/g, '"');
-
-      console.log('skills_json: ' + skills_json);
-
-      skills_json = JSON.parse(skills_json);
-
-      // send the JSON of skills back to the client
-      res.json(skills_json);
-
-      // upload file and skills to database
-      var file_data = fs.readFileSync(args[0]);
-      dbUpload(db, file_data, skills_json, file_type, userID).then(
-        (resume_id) => {
-          console.log(resume_id);
-
-          insertNewSkills(db, allCurrentKeys, skills_json)
-            .then(function () {
-              console.log(
-                'Insert skills promise resolved - about to update skills'
-              );
-              updateSkillAssoc(db, skills_json, resume_id);
-            })
-            .catch((err) => {
-              console.log(err);
-            });
-
-          return resume_id;
+  process.on('exit', () => {
+    fs.readFile(args[0] + '.json', (err, data) => {
+      if (err) console.error(err);
+      else {
+        const skills = JSON.parse(data);
+        if (skills.length == 0) {
+          res.send(
+            'No skills were found in the uploaded resume. Resume not saved.'
+          );
+          return;
         }
-      );
+        const skills_json = {
+          skills: skills,
+        };
 
-      if (deleteFile) {
-        console.log(`Now deleting - "${args[0]}"`);
-        fs.unlinkSync(args[0]);
+        console.log('skills_json: ' + skills_json);
+
+        res.json(skills_json);
+        var file_data = fs.readFileSync(args[0]);
+        dbUpload(db, file_data, skills_json, file_type, userID).then(
+          (resume_id) => {
+            console.log(resume_id);
+
+            insertNewSkills(db, allCurrentKeys, skills_json)
+              .then(function () {
+                console.log(
+                  'Insert skills promise resolved - about to update skills'
+                );
+                updateSkillAssoc(db, skills_json, resume_id);
+              })
+              .catch((err) => {
+                console.log(err);
+              });
+
+            return resume_id;
+          }
+        );
+
+        if (deleteFile) {
+          console.log(`Now deleting - "${args[0]}"`);
+          fs.unlinkSync(args[0]);
+        }
+        fs.unlinkSync(args[0] + '.json');
       }
-    }
+    });
   });
+  // process.stdout.on('data', function (data) {
+  //   console.log(`data.toString(): ${data.toString()}`);
+  //   if (data.toString().charCodeAt(0) != 27) {
+  //     var skills_json = data.toString().split(' skills:\n')[1];
+  //     if (skills_json.charCodeAt(0) == 115) {
+  //       res.send(
+  //         'No skills were found in the uploaded resume. Resume not saved.'
+  //       );
+  //       console.log('No skills found in resume');
+  //       return;
+  //     }
+  //     // make the string valid JSON
+  //     skills_json = [
+  //       skills_json.slice(0, 1),
+  //       '"skills": [',
+  //       skills_json.slice(1),
+  //     ].join('');
+  //     skills_json = [skills_json.slice(0, -2), ']', skills_json.slice(-2)].join(
+  //       ''
+  //     );
+  //     skills_json = skills_json.replace(/'/g, '"');
+
+  //     console.log('skills_json: ' + skills_json);
+
+  //     skills_json = JSON.parse(skills_json);
+
+  //     // send the JSON of skills back to the client
+  //     res.json(skills_json);
+
+  //     // upload file and skills to database
+  //     var file_data = fs.readFileSync(args[0]);
+  //     dbUpload(db, file_data, skills_json, file_type, userID).then(
+  //       (resume_id) => {
+  //         console.log(resume_id);
+
+  //         insertNewSkills(db, allCurrentKeys, skills_json)
+  //           .then(function () {
+  //             console.log(
+  //               'Insert skills promise resolved - about to update skills'
+  //             );
+  //             updateSkillAssoc(db, skills_json, resume_id);
+  //           })
+  //           .catch((err) => {
+  //             console.log(err);
+  //           });
+
+  //         return resume_id;
+  //       }
+  //     );
+
+  //     if (deleteFile) {
+  //       console.log(`Now deleting - "${args[0]}"`);
+  //       fs.unlinkSync(args[0]);
+  //     }
+  //   }
+  // });
 }
