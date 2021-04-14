@@ -242,7 +242,7 @@ async function handleQuery(queryObj) {
       }
       mgdbRetObj = await mongoClient
         .db('resume_org')
-        .collection('searchTesting')
+        .collection('skill_assoc')
         .find(mgdbQueryObj, { _id: 0 })
         .toArray();
     } catch (err) {
@@ -261,7 +261,12 @@ async function handleQuery(queryObj) {
     return response;
   }
 
-  resp.map((respObj) => (respTable[respObj.name] = new Set(respObj.resumes)));
+  // Convert resume IDs to strings and store in skill set
+  resp.map((respObj) => {
+    respTable[respObj.name] = new Set();
+    respObj.resumes.map((res) => respTable[respObj.name].add(res.toString()));
+  });
+
   console.log(resp);
 
   // Recursivly calculate a chunk, starting with non-macro chunks and working up to the root chunk.
@@ -354,7 +359,7 @@ const search = async (searchString) => {
   return response;
 };
 
-// let searchQuery = 'c++';
+// let searchQuery = 'c | python';
 // console.log('Searching: ' + searchQuery);
 // search(searchQuery);
 
