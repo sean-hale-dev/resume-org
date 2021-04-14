@@ -267,8 +267,6 @@ async function handleQuery(queryObj) {
     respObj.resumes.map((res) => respTable[respObj.name].add(res.toString()));
   });
 
-  console.log(resp);
-
   // Recursivly calculate a chunk, starting with non-macro chunks and working up to the root chunk.
   const resolveChunk = (chunk) => {
     // If chunk has unresolved macros, first resolve before continuing
@@ -355,7 +353,6 @@ const search = async (searchString) => {
   let resp = parseQuery(searchString);
   response = await handleQuery(resp);
 
-  console.log(response);
   return response;
 };
 
