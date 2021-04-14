@@ -13,151 +13,192 @@ const search = require('./utils/search.js');
 
 // TODO: ADD AUTHENTICATION
 
-mongo_client.connect(process.env.MONGO_SERVER_URI, { useUnifiedTopology: true }, function (err, database) {
-  if (err) throw err;
+mongo_client.connect(
+  process.env.MONGO_SERVER_URI,
+  { useUnifiedTopology: true },
+  function (err, database) {
+    if (err) throw err;
 
-  var db = database.db('resume_org');
+    var db = database.db('resume_org');
 
-  console.log('Connected with MongoDB!');
+    console.log('Connected with MongoDB!');
 
-  app.use(function (req, res, next) {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header(
-      'Access-Control-Allow-Headers',
-      'Origin, X-Requested-With, Content-Type, Accept'
-    );
-    next();
-  });
-
-  app.use(bodyParser.urlencoded({ extended: false, limit: '10mb' }));
-  app.use(bodyParser.json({ limit: '10mb' }));
-
-  app.post('/resume-upload', (req, res) => {
-    var form = new formidable.IncomingForm();
-    var userID;
-    form.parse(req);
-    
-    form.on('field', (fieldName, fieldValue) => {
-      if(fieldName == "userID")
-        userID = fieldValue;
+    app.use(function (req, res, next) {
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header(
+        'Access-Control-Allow-Headers',
+        'Origin, X-Requested-With, Content-Type, Accept'
+      );
+      next();
     });
 
-    form.on('fileBegin', function (name, file) {
-      file.path = `${__dirname}/resumes/${file.name}`;
-    });
+    app.use(bodyParser.urlencoded({ extended: false, limit: '10mb' }));
+    app.use(bodyParser.json({ limit: '10mb' }));
 
-    form.on('file', function (name, file) {
-      console.log(`File uploaded - "${file.path}"`);
-      if(userID == undefined) {
-        userID = "UserTest";
-      }
-      
-      db.collection("resumes").findOne({ "employee": userID }, (err, result) => {
-        console.log("Username:",userID);
-        
-        // user never uploaded a resume before - run it through the parser
-        if(result == null) {
-          console.log("It is a new resume - add it to the database");
-          
-          dbGetKeys(db).then((result) => {
-            console.log('Get keys - promise done:');
-            allCurrentKeys = result.map((doc) => doc.name);
-            console.log(allCurrentKeys);
-            parseResume(res, [file.path], db, true, allCurrentKeys, file.type, userID);
-          });
+    app.post('/resume-upload', (req, res) => {
+      var form = new formidable.IncomingForm();
+      var userID;
+      form.parse(req);
+
+      form.on('field', (fieldName, fieldValue) => {
+        if (fieldName == 'userID') userID = fieldValue;
+      });
+
+      form.on('fileBegin', function (name, file) {
+        file.path = `${__dirname}/resumes/${file.name}`;
+      });
+
+      form.on('file', function (name, file) {
+        console.log(`File uploaded - "${file.path}"`);
+        if (userID == undefined) {
+          userID = 'UserTest';
         }
-        // user already uploaded a resume - remove the old one before running new one through the parser
-        else {
-          console.log("It is an updated resume");
-          var id = result["_id"];
-          
-          // remove the original resume's ObjectId from the skill_assoc lists
-          db.collection("skill_assoc").updateMany(
-            { name: { $in: [...result["skills"]] } },
-            { $pull : { resumes: id } },
-            (err, updatedDocs) => {
-              // remove the original resume
-              db.collection("resumes").deleteOne({_id: id}, (err, removedResult) => {
-                if(err) console.error(err);
-              })
+
+        db.collection('resumes').findOne(
+          { employee: userID },
+          (err, result) => {
+            console.log('Username:', userID);
+
+            // user never uploaded a resume before - run it through the parser
+            if (result == null) {
+              console.log('It is a new resume - add it to the database');
+
+              dbGetKeys(db).then((result) => {
+                console.log('Get keys - promise done:');
+                allCurrentKeys = result.map((doc) => doc.name);
+                console.log(allCurrentKeys);
+                parseResume(
+                  res,
+                  [file.path],
+                  db,
+                  true,
+                  allCurrentKeys,
+                  file.type,
+                  userID
+                );
+              });
             }
-          );
-          // now that the old resume has been removed from the database, put the new one in
-          dbGetKeys(db).then((result) => {
-            console.log('Get keys - promise done:');
-            allCurrentKeys = result.map((doc) => doc.name);
-            console.log(allCurrentKeys);
-            parseResume(res, [file.path], db, true, allCurrentKeys, file.type, userID);
-          });
-        }
+            // user already uploaded a resume - remove the old one before running new one through the parser
+            else {
+              console.log('It is an updated resume');
+              var id = result['_id'];
+
+              // remove the original resume's ObjectId from the skill_assoc lists
+              db.collection('skill_assoc').updateMany(
+                { name: { $in: [...result['skills']] } },
+                { $pull: { resumes: id } },
+                (err, updatedDocs) => {
+                  // remove the original resume
+                  db.collection('resumes').deleteOne(
+                    { _id: id },
+                    (err, removedResult) => {
+                      if (err) console.error(err);
+                    }
+                  );
+                }
+              );
+              // now that the old resume has been removed from the database, put the new one in
+              dbGetKeys(db).then((result) => {
+                console.log('Get keys - promise done:');
+                allCurrentKeys = result.map((doc) => doc.name);
+                console.log(allCurrentKeys);
+                parseResume(
+                  res,
+                  [file.path],
+                  db,
+                  true,
+                  allCurrentKeys,
+                  file.type,
+                  userID
+                );
+              });
+            }
+          }
+        );
       });
     });
-  });
 
-  app.post('/resume-search', (req, res) => {
-    console.log('Searching');
-    const queryString = req.body.queryString || ' (c | c) ';
-    resumeSearch(queryString, db, res);
-  });
+    app.post('/resume-search', (req, res) => {
+      console.log('Searching');
+      const queryString = req.body.queryString || ' (c | c) ';
+      resumeSearch(queryString, db, res);
+    });
 
-  // lets the client download a resume from the database
-  app.get('/resume-download', (req, res) => {
-    // if searching by ObjectId
-    if (req.query.id) {
-      getResumeByID(db, mongo_client.ObjectId(req.query.id)).then(resume => {
-        var download_path = downloadResumeToServer(db, resume.resume, getExtFromType(resume.type), resume.employee);
-        console.log(`File redownloaded to server from database`);
-        sendResumeDownloadToClient(download_path, res);
-      }).catch(() => {
-        console.log(`No resume found with _id = ${req.query.id}`)
-      });
-    }
-    // if searching by employee
-    else if (req.query.employee) {
-      getResumeByEmployee(db, req.query.employee).then(resume => {
-        var download_path = downloadResumeToServer(db, resume.resume, getExtFromType(resume.type), resume.employee);
-        console.log(`File redownloaded to server from database`);
-        sendResumeDownloadToClient(download_path, res);
-      }).catch(() => {
-        console.log(`No resume found with "employee" = ${req.query.employee}`)
-      });
-    }
-    // if neither "id" nor "employee" have values set in the query string
-    else {
-      res.send(`Must search with query string "id" or "employee"`);
-    }
-  });
+    // lets the client download a resume from the database
+    app.get('/resume-download', (req, res) => {
+      // if searching by ObjectId
+      if (req.query.id) {
+        getResumeByID(db, mongo_client.ObjectId(req.query.id))
+          .then((resume) => {
+            var download_path = downloadResumeToServer(
+              db,
+              resume.resume,
+              getExtFromType(resume.type),
+              resume.employee
+            );
+            console.log(`File redownloaded to server from database`);
+            sendResumeDownloadToClient(download_path, res);
+          })
+          .catch(() => {
+            console.log(`No resume found with _id = ${req.query.id}`);
+          });
+      }
+      // if searching by employee
+      else if (req.query.employee) {
+        getResumeByEmployee(db, req.query.employee)
+          .then((resume) => {
+            var download_path = downloadResumeToServer(
+              db,
+              resume.resume,
+              getExtFromType(resume.type),
+              resume.employee
+            );
+            console.log(`File redownloaded to server from database`);
+            sendResumeDownloadToClient(download_path, res);
+          })
+          .catch(() => {
+            console.log(
+              `No resume found with "employee" = ${req.query.employee}`
+            );
+          });
+      }
+      // if neither "id" nor "employee" have values set in the query string
+      else {
+        res.send(`Must search with query string "id" or "employee"`);
+      }
+    });
 
-  app.post('/login', (req, res) => {
-    const { userID } = req.body;
-    console.log(`Logging in ${userID}`);
-    handleLogin(userID, db, res);
-  });
+    app.post('/login', (req, res) => {
+      const { userID } = req.body;
+      console.log(`Logging in ${userID}`);
+      handleLogin(userID, db, res);
+    });
 
-  app.post('/getProfile', (req, res) => {
-    const { userID } = req.body;
-    getProfile(userID, db, res);
-  });
+    app.post('/getProfile', (req, res) => {
+      const { userID } = req.body;
+      getProfile(userID, db, res);
+    });
 
-  app.post('/updateProfile', (req, res) => {
-    const { userID, details } = req.body;
-    updateProfile(userID, details, db, res);
-  });
+    app.post('/updateProfile', (req, res) => {
+      const { userID, details } = req.body;
+      updateProfile(userID, details, db, res);
+    });
 
-  app.post('/getResumeSkills', (req, res) => {
-    const { userID } = req.body;
-    getResumeSkillsByUserID(userID, db, res);
-  });
+    app.post('/getResumeSkills', (req, res) => {
+      const { userID } = req.body;
+      getResumeSkillsByUserID(userID, db, res);
+    });
 
-  app.post('/updateResumeSkills', (req, res) => {
-    const { userID, skills } = req.body;
-    updateResumeSkillsByUserID(userID, skills, db, res);
-  });
+    app.post('/updateResumeSkills', (req, res) => {
+      const { userID, skills } = req.body;
+      updateResumeSkillsByUserID(userID, skills, db, res);
+    });
 
-  app.listen(port, () => {
-    console.log(`Listening on *:${port}`);
-  });
-});
+    app.listen(port, () => {
+      console.log(`Listening on *:${port}`);
+    });
+  }
+);
 
 // Fetch resume skills by userID
 function getResumeSkillsByUserID(userID, db, res) {
@@ -255,21 +296,49 @@ function updateProfile(userID, details, db, res) {
 
 // Searches for resumes matching queryString
 function resumeSearch(searchString, db, res) {
+  const resumeLookup = (resID) =>
+    new Promise((resolve, reject) => {
+      db.collection('resumes')
+        .findOne({ _id: new mongo_client.ObjectId(resID) })
+        .then((resume) => {
+          returnObj = {
+            _id: (resume && resume._id) || false,
+            type: (resume && resume.type) || false,
+            skills: (resume && resume.skills) || [],
+            employee: (resume && resume.employee) || false,
+          };
+
+          if (returnObj.employee)
+            return db
+              .collection('employees')
+              .findOne({ userID: returnObj.employee });
+          else {
+            (returnObj.experience = false), (returnObj.position = false);
+
+            resolve(returnObj);
+          }
+        })
+        .then((empl) => {
+          returnObj.employee = empl.name;
+          returnObj.experience = empl.yearsExperience;
+          returnObj.position = empl.position;
+
+          resolve(returnObj);
+        });
+    });
+
   search.search(searchString).then((resumeIDSet) => {
     const resumeGetPromises = [...resumeIDSet.payload].map((id) =>
-      db.collection('resumes').findOne({ _id: id })
+      db.collection('resumes').findOne({ _id: new mongo_client.ObjectId(id) })
     );
 
     Promise.all(resumeGetPromises).then((resumes) => {
-      const resumeData = resumes.map((resume) => ({
-        _id: (resume && resume._id) || false,
-        type: (resume && resume.type) || false,
-        skills: (resume && resume.skills) || [],
-        employee: (resume && resume.employee) || false,
-        experience: (resume && resume.yearsExperience) || false,
-        position: (resume && resume.position) || false,
-      }));
-      res.json(resumeData);
+      const resumePromises = resumes.map((resume) => resumeLookup(resume._id));
+
+      Promise.all(resumePromises).then((resumesObjs) => {
+        console.log(resumesObjs);
+        res.json(resumesObjs);
+      });
     });
   });
 }
@@ -378,7 +447,7 @@ function getResumeByID(db, resume_id) {
 function getResumeByEmployee(db, employee_str) {
   return new Promise((resolve, reject) => {
     db.collection('resumes')
-      .find({ "employee": employee_str })
+      .find({ employee: employee_str })
       .toArray(function (err, result) {
         if (err) return reject(err);
         if (result.length == 0) return reject(err);
@@ -391,8 +460,11 @@ function getResumeByEmployee(db, employee_str) {
 function downloadResumeToServer(db, resume_binary, file_ext, employee) {
   console.log('About to write the pulled resume now');
   var file_path = `${__dirname}/resumes/resume_download${file_ext}`;
-  if(employee != "") {
-    file_path = `${__dirname}/resumes/${employee.replaceAll(" ", "_")}_resume_download${file_ext}`;
+  if (employee != '') {
+    file_path = `${__dirname}/resumes/${employee.replaceAll(
+      ' ',
+      '_'
+    )}_resume_download${file_ext}`;
   }
   fs.writeFileSync(
     file_path,
@@ -405,7 +477,7 @@ function downloadResumeToServer(db, resume_binary, file_ext, employee) {
 // sends the resume from the given file path on the server to the client as a download
 function sendResumeDownloadToClient(file_path, res) {
   res.download(file_path, (err) => {
-    if(err) console.error(err);
+    if (err) console.error(err);
     return;
   });
 }
@@ -415,7 +487,15 @@ function sendResumeArrayToClient(resume_list, res) {
 }
 
 // sends the resume file through the parser and sends the JSON of skills back to the client
-function parseResume(res, args, db, deleteFile, allCurrentKeys, file_type, userID) {
+function parseResume(
+  res,
+  args,
+  db,
+  deleteFile,
+  allCurrentKeys,
+  file_type,
+  userID
+) {
   var process = child_process.spawn('resumeParser', args);
 
   console.log('Resume being parsed - awaiting results');
@@ -423,11 +503,11 @@ function parseResume(res, args, db, deleteFile, allCurrentKeys, file_type, userI
     console.log(`data.toString(): ${data.toString()}`);
     if (data.toString().charCodeAt(0) != 27) {
       var skills_json = data.toString().split(' skills:\n')[1];
-      if(skills_json.charCodeAt(0) == 115){
+      if (skills_json.charCodeAt(0) == 115) {
         res.send(
           'No skills were found in the uploaded resume. Resume not saved.'
         );
-        console.log("No skills found in resume");
+        console.log('No skills found in resume');
         return;
       }
       // make the string valid JSON
@@ -450,22 +530,24 @@ function parseResume(res, args, db, deleteFile, allCurrentKeys, file_type, userI
 
       // upload file and skills to database
       var file_data = fs.readFileSync(args[0]);
-      dbUpload(db, file_data, skills_json, file_type, userID).then((resume_id) => {
-        console.log(resume_id);
+      dbUpload(db, file_data, skills_json, file_type, userID).then(
+        (resume_id) => {
+          console.log(resume_id);
 
-        insertNewSkills(db, allCurrentKeys, skills_json)
-          .then(function () {
-            console.log(
-              'Insert skills promise resolved - about to update skills'
-            );
-            updateSkillAssoc(db, skills_json, resume_id);
-          })
-          .catch((err) => {
-            console.log(err);
-          });
+          insertNewSkills(db, allCurrentKeys, skills_json)
+            .then(function () {
+              console.log(
+                'Insert skills promise resolved - about to update skills'
+              );
+              updateSkillAssoc(db, skills_json, resume_id);
+            })
+            .catch((err) => {
+              console.log(err);
+            });
 
-        return resume_id;
-      });
+          return resume_id;
+        }
+      );
 
       if (deleteFile) {
         console.log(`Now deleting - "${args[0]}"`);
