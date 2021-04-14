@@ -266,7 +266,10 @@ def cli(resumefile, install):
         click.echo(f"ERROR: Something went wrong, we're unable to extract your resume data")
         return
 
-    skills = extract_skills(text, resumefile) 
+    skills = list(extract_skills(text, resumefile))
 
     print(f"Finished tokenization and parsing -- Detected {len(skills)} skills:\n{skills}")
 
+    with open("skills_out.json", "w+") as f:
+        json.dump(skills, f)
+        f.close()
