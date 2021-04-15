@@ -273,3 +273,6 @@ def cli(resumefile, install):
     with open(f"{resumefile}.json", "w+") as f:
         json.dump(skills, f)
         f.close()
+
+if __name__ == "__main__":
+    cli()
