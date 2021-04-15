@@ -1,4 +1,4 @@
-src/resumeParser/test_resumes
+src/server/utils/parser/test_resumes
 src/resumeParser/build
 src/resumeParser/dist
 *.DS_Store
