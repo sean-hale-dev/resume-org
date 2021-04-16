@@ -83,7 +83,7 @@ class Database extends Component {
     // TODO: Implement Search Function
     this.state = {
       searchResults: [],
-      searchText: "",
+      // searchText: "",
     };
     this.handleSearch.bind(this);
   }

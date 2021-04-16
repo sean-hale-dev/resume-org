@@ -55,9 +55,21 @@ mongo_client.connect(process.env.MONGO_URI, function (err, database) {
 
   app.post('/resume-search', (req, res) => {
     console.log('Searching');
-    const queryString = req.body.queryString || ' (c | c) ';
+    const queryString = req.body.queryString || '(c | c)';
     resumeSearch(queryString, db, res);
   });
+
+  app.post('/resume-report', (req, res) => {
+    console.log('Generating report');
+    const queryString = req.body.queryString || '(c | c)';
+    generateReport(queryString, db, res);
+  });
+
+  // TEMP
+  app.get('/resume-report', (req, res) => {
+    const queryString = 'js | c';
+    generateReport(queryString, db, res);
+  })
 
   app.get('/resume-download', (req, res) => {
     // file path hard-coded for testing purposes
@@ -140,7 +152,7 @@ function validateSearchQueryParentheses(queryString) {
 }
 
 function validateSearchQueryMacros(queryString) {
-  const regExpMacro = /\$\d*\$/;
+  const regExpMacro = /\$\d*\$/; // Regular expression that matches search 
   const queryStringMacros = queryString.match(regExpMacro);
   console.log(queryStringMacros);
   return !queryStringMacros || queryStringMacros.length == 0;
@@ -285,6 +297,54 @@ function resumeSearch(searchString, db, res) {
       res.json(resumeData);
     });
   });
+}
+
+// Resume Report Generator
+function generateReport(searchString, db, res) {
+  const validation = validateSearchQuery(searchString);
+  const response = {
+    employeeCount: 0,
+    error: false,
+    message: "",
+    strictMatchCount: 0,
+    looseMatchCount: 0,
+  }
+  // if (!validation.good) {
+  //   console.log(`Search validation errors: ${validation.issues.join(", ")}`);
+  //   res.json([]);
+  //   return;
+  // }
+  db.collection('resumes').countDocuments({}).then(resumeCount => {
+    response.employeeCount = resumeCount || 0;
+    if (!validation.good) {
+      console.log(`Search validation errors: ${validation.issues.join(", ")}`);
+      response.message = `Search validation errors: ${validation.issues.join(", ")}`;
+      response.error = true;
+      res.json(response);
+      return;
+    } else {
+      search.search(searchString).then(resumeIDSet => {
+        console.log(resumeIDSet);
+        if (resumeIDSet.status == -1) {
+          res.json(response);
+          return;
+        }
+        response.strictMatchCount = resumeIDSet.payload.size;
+        const searchTerms = searchString.toLowerCase().split(/[\|\*&!\(\)]+/).map(term => term.trim());
+        const trimmedSearchTerms = searchTerms.filter((term, index) => term || index == searchTerms.length - 1);
+        const looseSearchString = trimmedSearchTerms.join(" | ");
+        search.search(looseSearchString).then(looseResumeIDSet => {
+          console.log(looseResumeIDSet);
+          if (looseResumeIDSet.status == -1) {
+            res.json(response);
+            return;
+          }
+          response.looseMatchCount = looseResumeIDSet.payload.size;
+          res.json(response);
+        })
+      })
+    }
+  })
 }
 
 // uploads a resume as a new document in the "resumes" collection in the database

@@ -6,6 +6,7 @@ import ArrowForwardIcon from '@material-ui/icons/ArrowForward';
 import PageBody from './shared/pagebody.js';
 import { withStyles } from '@material-ui/core/styles';
 import { grey } from '@material-ui/core/colors';
+import SearchBar from './shared/searchBar.js';
 
 
 const styles = theme => ({
@@ -32,6 +33,9 @@ class Reports extends Component {
 
   constructor(props) {
     super(props);
+    this.state = {
+      
+    }
   }
 
   render () {

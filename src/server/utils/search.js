@@ -242,7 +242,7 @@ async function handleQuery(queryObj) {
       }
       mgdbRetObj = await mongoClient
         .db('resume_org')
-        .collection('searchTesting')
+        .collection('skill_assoc')
         .find(mgdbQueryObj, { _id: 0 })
         .toArray();
     } catch (err) {
