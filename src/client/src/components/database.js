@@ -12,6 +12,7 @@ import {
   TextField,
   Toolbar,
   Typography,
+  Link,
 } from '@material-ui/core';
 import React, { Component } from 'react';
 import Header from './shared/header.js';
@@ -106,6 +107,7 @@ class Database extends Component {
           position: data.position || "Unknown Position",
           experience: data.experience || "Unknown",
           index,
+          employeeID: data.employeeID || "",
         }))
       })
     })
@@ -174,8 +176,6 @@ class Database extends Component {
                   <InputLabel id="results-sort-label">Sort by:</InputLabel>
                   <Select labelId="results-sort-label" id="results-sort" onChange={event => sortOptions[event.target.value]()}>
                     {Object.keys(sortOptions).map(sortOption => <MenuItem value={sortOption}>{sortOption}</MenuItem>)}
-                    {/* <MenuItem value="Experience">Experience</MenuItem>
-                    <MenuItem value="Skill Match">Skill Match</MenuItem> */}
                   </Select>
                 </FormControl>
               </Grid>
@@ -199,10 +199,12 @@ class Database extends Component {
                     </Grid>
                     <Grid item xs={3}>
                       <Toolbar className={classes.viewResumeContainer}>
-                        <Button>
-                          View Resume
-                          <ArrowForwardIcon />
-                        </Button>
+                        <Link href={result.employeeID ? `http://${window.location.hostname}:8080/resume-download?employee=${result.employeeID}` : ""} color="inherit">
+                          <Button disabled={!result.employeeID}>
+                            View Resume
+                            <ArrowForwardIcon />
+                          </Button>
+                        </Link>
                       </Toolbar>
                     </Grid>
                   </Grid>

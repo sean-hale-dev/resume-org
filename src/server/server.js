@@ -121,19 +121,19 @@ mongo_client.connect(
 
     app.post('/resume-search', (req, res) => {
       console.log('Searching');
-      const queryString = req.body.queryString || '(c | c)';
+      const queryString = req.body.queryString || '(c | !c)';
       resumeSearch(queryString, db, res);
     });
 
     app.post('/resume-report', (req, res) => {
       console.log('Generating report');
-      const queryString = req.body.queryString || '(c | c)';
+      const queryString = req.body.queryString || '(c | !c)';
       generateReport(queryString, db, res);
     });
 
     // TEMP
     app.get('/resume-report', (req, res) => {
-      const queryString = 'js | c';
+      const queryString = 'javascript & c';
       generateReport(queryString, db, res);
     })
 
@@ -170,10 +170,11 @@ mongo_client.connect(
             console.log(`File redownloaded to server from database`);
             sendResumeDownloadToClient(download_path, res);
           })
-          .catch(() => {
+          .catch((e) => {
             console.log(
               `No resume found with "employee" = ${req.query.employee}`
             );
+            console.log(e);
           });
       }
       // if neither "id" nor "employee" have values set in the query string
@@ -390,6 +391,7 @@ function resumeSearch(searchString, db, res) {
             type: (resume && resume.type) || false,
             skills: (resume && resume.skills && resume.skills.filter(skill => trimmedSearchTermsSet.has(skill)).sort()) || [],
             employee: (resume && resume.employee) || false,
+            employeeID: (resume && resume.employee) || false,
           };
 
           if (returnObj.employee)
@@ -439,43 +441,76 @@ function generateReport(searchString, db, res) {
     message: "",
     strictMatchCount: 0,
     looseMatchCount: 0,
+    individualSkillMatches: {},
   }
+
+  if (!validation.good) {
+    console.log(`Search validation errors: ${validation.issues.join(", ")}`);
+    response.message = `Search validation errors: ${validation.issues.join(", ")}`;
+    response.error = true;
+    res.json(response);
+    return;
+  }
+
+  const searchTerms = searchString.toLowerCase().split(/[\|\*&!\(\)]+/).map(term => term.trim());
+  const trimmedSearchTerms = searchTerms.filter((term, index) => term || index == searchTerms.length - 1);
+  const looseSearchString = trimmedSearchTerms.join(" | ");
   // if (!validation.good) {
   //   console.log(`Search validation errors: ${validation.issues.join(", ")}`);
   //   res.json([]);
   //   return;
   // }
-  db.collection('resumes').countDocuments({}).then(resumeCount => {
-    response.employeeCount = resumeCount || 0;
-    if (!validation.good) {
-      console.log(`Search validation errors: ${validation.issues.join(", ")}`);
-      response.message = `Search validation errors: ${validation.issues.join(", ")}`;
-      response.error = true;
-      res.json(response);
-      return;
-    } else {
-      search.search(searchString).then(resumeIDSet => {
-        console.log(resumeIDSet);
-        if (resumeIDSet.status == -1) {
-          res.json(response);
-          return;
-        }
-        response.strictMatchCount = resumeIDSet.payload.size;
-        const searchTerms = searchString.toLowerCase().split(/[\|\*&!\(\)]+/).map(term => term.trim());
-        const trimmedSearchTerms = searchTerms.filter((term, index) => term || index == searchTerms.length - 1);
-        const looseSearchString = trimmedSearchTerms.join(" | ");
-        search.search(looseSearchString).then(looseResumeIDSet => {
-          console.log(looseResumeIDSet);
-          if (looseResumeIDSet.status == -1) {
-            res.json(response);
-            return;
-          }
-          response.looseMatchCount = looseResumeIDSet.payload.size;
-          res.json(response);
-        })
-      })
+  const searchPromises = [...new Set(trimmedSearchTerms)].map(skill => search.search(skill).then(resumeIDSet => {
+    if (resumeIDSet.status != -1) {
+      response.individualSkillMatches[skill] = resumeIDSet.payload.size;
     }
-  })
+  }));
+  searchPromises.push(db.collection('resumes').countDocuments({}).then(resumeCount => {
+    response.employeeCount = resumeCount || 0;
+  }));
+  searchPromises.push(search.search(searchString).then(resumeIDSet => {
+    if (resumeIDSet.status != -1) {
+      response.strictMatchCount = resumeIDSet.payload.size;
+    }
+  }));
+  searchPromises.push(search.search(looseSearchString).then(resumeIDSet => {
+    if (resumeIDSet.status != -1) {
+      response.looseMatchCount = resumeIDSet.payload.size;
+    }
+  }));
+  Promise.all(searchPromises).then(() => res.json(response));
+
+  // db.collection('resumes').countDocuments({}).then(resumeCount => {
+  //   response.employeeCount = resumeCount || 0;
+  //   if (!validation.good) {
+  //     console.log(`Search validation errors: ${validation.issues.join(", ")}`);
+  //     response.message = `Search validation errors: ${validation.issues.join(", ")}`;
+  //     response.error = true;
+  //     res.json(response);
+  //     return;
+  //   } else {
+  //     search.search(searchString).then(resumeIDSet => {
+  //       console.log(resumeIDSet);
+  //       if (resumeIDSet.status == -1) {
+  //         res.json(response);
+  //         return;
+  //       }
+  //       response.strictMatchCount = resumeIDSet.payload.size;
+  //       const searchTerms = searchString.toLowerCase().split(/[\|\*&!\(\)]+/).map(term => term.trim());
+  //       const trimmedSearchTerms = searchTerms.filter((term, index) => term || index == searchTerms.length - 1);
+  //       const looseSearchString = trimmedSearchTerms.join(" | ");
+  //       search.search(looseSearchString).then(looseResumeIDSet => {
+  //         console.log(looseResumeIDSet);
+  //         if (looseResumeIDSet.status == -1) {
+  //           res.json(response);
+  //           return;
+  //         }
+  //         response.looseMatchCount = looseResumeIDSet.payload.size;
+  //         res.json(response);
+  //       })
+  //     })
+  //   }
+  // })
 }
 
 // uploads a resume as a new document in the "resumes" collection in the database
@@ -596,7 +631,7 @@ function downloadResumeToServer(db, resume_binary, file_ext, employee) {
   console.log('About to write the pulled resume now');
   var file_path = `${__dirname}/resumes/resume_download${file_ext}`;
   if (employee != '') {
-    file_path = `${__dirname}/resumes/${employee.replaceAll(
+    file_path = `${__dirname}/resumes/${employee.replace(
       ' ',
       '_'
     )}_resume_download${file_ext}`;

@@ -25,7 +25,8 @@ import Autocomplete from '@material-ui/lab/Autocomplete';
 
 const styles = (theme) => ({
   searchField: {
-    width: '75%',
+    width: '70%',
+    // margin: "0 20px",
   },
   searchToolbar: {
     gap: '20px',
@@ -122,7 +123,12 @@ class SearchBar extends Component {
     const {searchText, searchOptions} = this.state;
     // console.log(`searchText: ${searchText}`);
     const lastTerm = this.getLastTerm(searchText);
-    const activeOptions = searchOptions.filter(option => option.toLowerCase().includes(lastTerm));
+    const MAX_TERMS_TO_RENDER = 1000;
+    const activeOptions = searchOptions
+        .filter(option => option.toLowerCase().includes(lastTerm))
+        .sort((a, b) => a.length - b.length)
+        .filter((option, index) => index < MAX_TERMS_TO_RENDER)
+        .sort();
     
     this.setState({activeOptions});
   }
@@ -192,7 +198,7 @@ class SearchBar extends Component {
           error={!good}
         />}
       />
-      <Button variant="contained" color="primary" onClick={() => {this.handleSearch()}} disabled={!good}>
+      <Button variant="contained" color="primary" onClick={() => {this.handleSearch()}} disabled={!good || !searchText}>
         {searchButtonText}
       </Button>
     </Grid>
