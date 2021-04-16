@@ -224,7 +224,7 @@ function getAllSearchableSkills(db, res) {
     if (err) {
       res.json([]);
     } else {
-      const skills = results.map(result => result.name);
+      const skills = results.filter(result => result.resumes && result.resumes.length).map(result => result.name);
       // console.log(skills);
       res.json(skills);
     }
@@ -297,22 +297,81 @@ function updateResumeSkillsByUserID(userID, skills, db, res) {
   // Filter skills to ensure no duplicates
   skills =
     skills && Array.isArray(skills)
-      ? skills.filter((skill) => skill).map((skill) => `${skill}`)
+      ? [...new Set(skills.filter((skill) => skill).map((skill) => `${skill}`))]
       : [];
+  
+  const newSkillsSet = new Set(skills);
+  db.collection('resumes').findOne({employee: userID}).then(oldResume => {
+    if (!oldResume) {
+      res.json([]);
+      return;
+    };
+    const oldResumeSkillsSet = new Set(oldResume && oldResume.skills ? oldResume.skills : []);
+    const skillsToRemove = [...oldResumeSkillsSet].filter(skill => !newSkillsSet.has(skill));
+    const skillsToAdd = [...newSkillsSet].filter(skill => !oldResumeSkillsSet.has(skill));
+    console.log(`Old skills: ${JSON.stringify([...oldResumeSkillsSet])}`);
+    console.log(`New skills: ${JSON.stringify([...newSkillsSet])}`);
+    console.log(`Removing ${JSON.stringify(skillsToRemove)}`);
+    console.log(`Adding ${JSON.stringify(skillsToAdd)}`);
+    db.collection('skill_assoc').find({name: {$exists: true}}).toArray((err, allSkills) => {
+      let existingSkillNames = [];
+      if (!err) {
+        existingSkillNames = allSkills.map(result => result.name);
+      }
+      const existingSkillNamesSet = new Set(existingSkillNames);
+      const skillsToInitInSearch = skillsToAdd.filter(skill => !existingSkillNamesSet.has(skill));
+      console.log(`Initializing skills in skill_assoc: ${JSON.stringify(skillsToInitInSearch)}`);
+      const initSkills = async (skillsToInit) => {
+        if (skillsToInit.length) {
+          await db.collection('skill_assoc').insertMany(skillsToInitInSearch.map(name => ({name, resumes: []})));
+        }
+        return;
+      }
+      initSkills(skillsToInitInSearch).then(() => {
+        db.collection('skill_assoc').updateMany(
+          {name: {$in: skillsToRemove}},
+          {$pull: {resumes: oldResume._id}}).then(() => {
+            db.collection('skill_assoc').updateMany(
+              {
+                name: {
+                  $in: skillsToAdd,
+                },
+              },
+              {
+                $push: {
+                  resumes: oldResume._id,
+                },
+              }
+            ).then(() => {
+              db.collection('resumes')
+              .updateOne(
+                {employee: userID},
+                {
+                  $set: { skills },
+                }
+              )
+              .then(() => {
+                getResumeSkillsByUserID(userID, db, res);
+              });
+            });
+        });
+      });
+    });
+  });
   // db.collection('employees')
   //   .findOne({ userID })
   //   .then((employee) => {
   //     if (employee && employee.resume) {
-        db.collection('resumes')
-          .updateOne(
-            {employee: userID},
-            {
-              $set: { skills },
-            }
-          )
-          .then(() => {
-            getResumeSkillsByUserID(userID, db, res);
-          });
+        // db.collection('resumes')
+        //   .updateOne(
+        //     {employee: userID},
+        //     {
+        //       $set: { skills },
+        //     }
+        //   )
+        //   .then(() => {
+        //     getResumeSkillsByUserID(userID, db, res);
+        //   });
     //   } else {
     //     getResumeSkillsByUserID(userID, db, res);
     //   }
