@@ -77,6 +77,12 @@ const styles = (theme) => ({
   },
 });
 
+const stringCompare = (a, b) => {
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+}
+
 class Database extends Component {
   constructor(props) {
     super(props);
@@ -94,19 +100,57 @@ class Database extends Component {
     axios.post(`http://${window.location.hostname}:8080/resume-search`, {queryString: searchText}).then(res => {
       console.log(res);
       this.setState({
-        searchResults: res.data.map(data => ({
+        searchResults: res.data.map((data, index) => ({
           name: data.employee || "Unknown Employee",
           matchedSkills: data.skills || [], 
           position: data.position || "Unknown Position",
           experience: data.experience || "Unknown",
+          index,
         }))
       })
     })
   }
 
+  
+
+  handleSortSelect(selectedSort) {
+
+  }
+
   render() {
     const { classes, userID } = this.props;
     const { searchResults, searchText } = this.state;
+    const sortOptions = {
+      "----": () => {
+        searchResults.sort((a, b) => a.index - b.index);
+        this.setState({searchResults});
+      },
+      "Name (A-Z)": () => {
+        searchResults.sort((a, b) => stringCompare(a.name, b.name));
+        this.setState({searchResults});
+      },
+      "Position (A-Z)": () => {
+        searchResults.sort((a, b) => stringCompare(a.position, b.position));
+        this.setState({searchResults});
+      },
+      "Most Experience": () => {
+        searchResults.sort((a, b) => (b.experience || 0) - (a.experience || 0));
+        this.setState({searchResults});
+      },
+      "Most Skills Matched": () => {
+        searchResults.sort((a, b) => b.matchedSkills.length - a.matchedSkills.length);
+        this.setState({searchResults});
+      },
+      "Least Experience": () => {
+        searchResults.sort((a, b) => (a.experience || 0) - (b.experience || 0));
+        this.setState({searchResults});
+      },
+      "Least Skills Matched": () => {
+        searchResults.sort((a, b) => a.matchedSkills.length - b.matchedSkills.length);
+        this.setState({searchResults});
+      },
+    }
+
     return (
       <>
         <Header selectedPage="Resume Database" userID={userID}/>
@@ -128,9 +172,10 @@ class Database extends Component {
               <Grid item xs={4}>
                 <FormControl className={classes.resultsSortBy}>
                   <InputLabel id="results-sort-label">Sort by:</InputLabel>
-                  <Select labelId="results-sort-label" id="results-sort">
-                    <MenuItem value="Experience">Experience</MenuItem>
-                    <MenuItem value="Skill Match">Skill Match</MenuItem>
+                  <Select labelId="results-sort-label" id="results-sort" onChange={event => sortOptions[event.target.value]()}>
+                    {Object.keys(sortOptions).map(sortOption => <MenuItem value={sortOption}>{sortOption}</MenuItem>)}
+                    {/* <MenuItem value="Experience">Experience</MenuItem>
+                    <MenuItem value="Skill Match">Skill Match</MenuItem> */}
                   </Select>
                 </FormControl>
               </Grid>
