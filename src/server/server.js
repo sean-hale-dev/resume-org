@@ -358,24 +358,6 @@ function updateResumeSkillsByUserID(userID, skills, db, res) {
       });
     });
   });
-  // db.collection('employees')
-  //   .findOne({ userID })
-  //   .then((employee) => {
-  //     if (employee && employee.resume) {
-        // db.collection('resumes')
-        //   .updateOne(
-        //     {employee: userID},
-        //     {
-        //       $set: { skills },
-        //     }
-        //   )
-        //   .then(() => {
-        //     getResumeSkillsByUserID(userID, db, res);
-        //   });
-    //   } else {
-    //     getResumeSkillsByUserID(userID, db, res);
-    //   }
-    // });
 }
 
 // Handle user login
