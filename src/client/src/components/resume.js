@@ -191,7 +191,7 @@ class Resume extends Component {
               <Grid container alignItems="center">
                 {isEditing ? (
                   <>
-                    {editedSkills.map((skill, index) => (
+                    {editedSkills.sort().map((skill, index) => (
                       <Grid item xs={4}>
                         <FormControl>
                           <OutlinedInput
@@ -227,7 +227,7 @@ class Resume extends Component {
                     </Grid>
                   </>
                 ) : (
-                  skills.map((skill) => (
+                  skills.sort().map((skill) => (
                     <Grid item xs={3}>
                       <Typography className={classes.skillTypography}>
                         {'\u25CF'} {skill}
