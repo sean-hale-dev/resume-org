@@ -128,7 +128,8 @@ class SearchBar extends Component {
         .filter(option => option.toLowerCase().includes(lastTerm))
         .sort((a, b) => a.length - b.length)
         .filter((option, index) => index < MAX_TERMS_TO_RENDER)
-        .sort();
+        .sort()
+        .sort((a, b) => a.indexOf(lastTerm) - b.indexOf(lastTerm));
     
     this.setState({activeOptions});
   }
