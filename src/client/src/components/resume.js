@@ -58,7 +58,7 @@ class Resume extends Component {
       })
       .then((res) => {
         if (res && res.data && res.data.skills) {
-          this.setState({ skills: res.data.skills });
+          this.setState({ skills: res.data.skills.sort() });
         }
       });
   }
@@ -145,12 +145,12 @@ class Resume extends Component {
     axios.post(`http://${window.location.hostname}:8080/updateResumeSkills`, {
       userID,
       skills: [
-        ...new Set(editedSkills ? editedSkills.filter((skill) => skill) : []),
+        ...new Set(editedSkills ? editedSkills.filter((skill) => skill).sort() : []),
       ],
     });
     this.setState({
       isEditing: false,
-      skills: editedSkills ? editedSkills.map((skill) => skill) : [],
+      skills: editedSkills ? editedSkills.map((skill) => skill).sort() : [],
     });
   }
 
@@ -191,7 +191,7 @@ class Resume extends Component {
               <Grid container alignItems="center">
                 {isEditing ? (
                   <>
-                    {editedSkills.sort().map((skill, index) => (
+                    {editedSkills.map((skill, index) => (
                       <Grid item xs={4}>
                         <FormControl>
                           <OutlinedInput
@@ -227,7 +227,7 @@ class Resume extends Component {
                     </Grid>
                   </>
                 ) : (
-                  skills.sort().map((skill) => (
+                  skills.map((skill) => (
                     <Grid item xs={3}>
                       <Typography className={classes.skillTypography}>
                         {'\u25CF'} {skill}
