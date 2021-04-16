@@ -26,7 +26,10 @@ function App(props) {
     <ThemeProvider theme={resume_org_theme}>
       <Router>
         <Switch>
-          <Route exact path="/" render={props => <Home {...props} userID={userID} />} />
+          {/* <Route exact path="/" render={props => <Home {...props} userID={userID} />} /> */}
+          <Route exact path="/">
+            <Redirect to={userID ? "/resume" : "/login"} />
+          </Route>
           <Route exact path="/resume" render={props => <Resume {...props} userID={userID} />} />
           <Route exact path="/database" render={props => <Database {...props} userID={userID} />}/>
           <Route exact path="/reports" render={props => <Reports {...props} userID={userID} />}/>

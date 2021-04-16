@@ -271,12 +271,12 @@ function validateSearchQuery(queryString) {
 
 // Fetch resume skills by userID
 function getResumeSkillsByUserID(userID, db, res) {
-  db.collection('employees')
-    .findOne({ userID })
-    .then((employee) => {
-      if (employee && employee.resume) {
+  // db.collection('employees')
+  //   .findOne({ userID })
+  //   .then((employee) => {
+  //     if (employee && employee.resume) {
         db.collection('resumes')
-          .findOne({ _id: employee.resume })
+          .findOne({employee: userID})
           .then((resume) => {
             if (resume && resume.skills) {
               res.json({ skills: resume.skills });
@@ -284,26 +284,27 @@ function getResumeSkillsByUserID(userID, db, res) {
               res.json({ skills: [] });
             }
           });
-      } else {
-        res.json({ skills: [] });
-      }
-    });
+    //   } else {
+    //     res.json({ skills: [] });
+    //   }
+    // });
 }
 
 // Update resume skills
+// TODO: Update this to not break searching
 function updateResumeSkillsByUserID(userID, skills, db, res) {
   // Filter skills to ensure no duplicates
   skills =
     skills && Array.isArray(skills)
       ? skills.filter((skill) => skill).map((skill) => `${skill}`)
       : [];
-  db.collection('employees')
-    .findOne({ userID })
-    .then((employee) => {
-      if (employee && employee.resume) {
+  // db.collection('employees')
+  //   .findOne({ userID })
+  //   .then((employee) => {
+  //     if (employee && employee.resume) {
         db.collection('resumes')
           .updateOne(
-            { _id: employee.resume },
+            {employee: userID},
             {
               $set: { skills },
             }
@@ -311,10 +312,10 @@ function updateResumeSkillsByUserID(userID, skills, db, res) {
           .then(() => {
             getResumeSkillsByUserID(userID, db, res);
           });
-      } else {
-        getResumeSkillsByUserID(userID, db, res);
-      }
-    });
+    //   } else {
+    //     getResumeSkillsByUserID(userID, db, res);
+    //   }
+    // });
 }
 
 // Handle user login
