@@ -5,6 +5,13 @@ import { Button, IconButton, Card, Typography, TextField, Toolbar, Grid } from '
 import { withStyles } from '@material-ui/core/styles'
 import { withCookies, Cookies } from 'react-cookie';
 import axios from 'axios';
+import {
+  BrowserRouter as Router,
+  Switch,
+  Route,
+  Link,
+  Redirect
+} from "react-router-dom";
 
 const styles = (theme) => ({
   loginField: {
@@ -20,6 +27,7 @@ class Login extends Component {
     super(props);
     this.state = {
       userText: "",
+      loggingIn: false,
     }
   }
 
@@ -27,11 +35,14 @@ class Login extends Component {
     const {userText} = this.state;
     const {cookies} = this.props;
     cookies.set("userID", userText);
-    this.setState({userText: ""});
-
-    axios.post(`http://${window.location.hostname}:8080/login`, {userID: userText}).then(res => {
-      console.log("Login registered on server");
+    this.setState({userText: ""}, () => {
+      axios.post(`http://${window.location.hostname}:8080/login`, {userID: userText}).then(res => {
+        console.log("Login registered on server");
+        this.setState({loggingIn: true})
+      });
     });
+
+
   }
 
   handleLogout() {
@@ -42,8 +53,9 @@ class Login extends Component {
 
   render() {
     const {userID, classes, cookies} = this.props;
-    const {userText} = this.state;
+    const {userText, loggingIn} = this.state;
     return <>
+      {loggingIn && <Redirect to="/profile" />}
       <Header selectedPage={userID ? "Logout" : "Login"} userID={userID}/>
       <PageBody>
         <Typography variant="h5" align="center">WARNING: THIS IS A TEMPORARY LOGIN PAGE. PLEASE IMPLEMENT SECURE USER MANAGEMENT SYSTEM.</Typography>

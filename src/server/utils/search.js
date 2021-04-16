@@ -1,5 +1,4 @@
 const { MongoClient, ObjectID } = require('mongodb');
-const dotenv = require('dotenv').config();
 
 // Performs intersection operation between called set and otherSet
 //
@@ -224,7 +223,7 @@ async function handleQuery(queryObj) {
 
   // Grab resume _id's from mongo with the keyset
   const fetchFromMongo = async (tokenArr, negation = false) => {
-    const mongoClient = new MongoClient(process.env.MONGO_URI, {
+    const mongoClient = new MongoClient(process.env.MONGO_SEARCH_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
@@ -330,8 +329,9 @@ async function handleQuery(queryObj) {
 }
 
 const search = async (searchString) => {
+  require('dotenv').config();
   let response = {};
-  if (process.env.MONGO_URI == null) {
+  if (process.env.MONGO_SEARCH_URI == null) {
     console.error(
       '<SEARCH> ERROR: Unable to resolve MONGO_URI environmental variable... cannot connect to database'
     );
