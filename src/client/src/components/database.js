@@ -91,6 +91,9 @@ class Database extends Component {
     this.state = {
       searchResults: [],
       // searchText: "",
+      openSnackBar: null,
+      typeSnackBar: "loading",
+      snackBarText: ""
     };
     this.handleSearch.bind(this);
   }
@@ -99,9 +102,9 @@ class Database extends Component {
     // const { searchText } = this.state;
     console.log(`Searching for ${searchText}`);
     axios.post(`http://${window.location.hostname}:8080/resume-search`, {queryString: searchText}).then(res => {
-      console.log(res);
+      console.log(res.data.message);
       this.setState({
-        searchResults: res.data.map((data, index) => ({
+        searchResults: res.data.resumes.map((data, index) => ({
           name: data.employee || "Unknown Employee",
           matchedSkills: data.skills || [], 
           position: data.position || "Unknown Position",
