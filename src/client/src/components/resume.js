@@ -13,6 +13,10 @@ import {
   FormControl,
   OutlinedInput,
   Toolbar,
+  Snackbar,
+  Alert,
+  Grow,
+  Collapse,
 } from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles';
 import './styles/resume.css';
@@ -22,6 +26,8 @@ import EditIcon from '@material-ui/icons/Edit';
 import CancelIcon from '@material-ui/icons/Cancel';
 import SaveIcon from '@material-ui/icons/Save';
 import AddIcon from '@material-ui/icons/Add';
+import CloseIcon from '@material-ui/icons/Close';
+import MuiAlert from '@material-ui/lab/Alert'
 
 const styles = (theme) => ({
   resumeUploadCard: {
@@ -46,6 +52,8 @@ class Resume extends Component {
       skills: undefined,
       isEditing: false,
       editedSkills: undefined,
+      openSnackBar: null,
+      typeSnackBar: "loading"
     };
   }
 
@@ -80,6 +88,10 @@ class Resume extends Component {
         'Upload Success- Will post the file: ',
         this.state.resumeFile
       );
+      this.setState({
+        openSnackBar: true,
+        typeSnackBar: "loading"
+      });
       var formData = new FormData();
       formData.append('resume', this.state.resumeFile);
       formData.append('userID', this.props.userID);
@@ -96,13 +108,26 @@ class Resume extends Component {
         .then((res) => {
           this.setState({
             skills: res.data && res.data.skills ? res.data.skills.sort() : [],
+            openSnackBar: true,
+            typeSnackBar: "success"
           });
           console.log('skills: ', this.state.skills);
+        })
+        .catch((err) => {
+          this.setState({
+            openSnackBar: true,
+            typeSnackBar: "error"
+          });
+          console.error(err);
         });
     } else {
       console.log('Upload Fail - File not defined');
     }
   }
+  
+  handleSnackbarClose = (event, reason) => {
+    this.setState({ openSnackBar: false });
+  };
 
   openEdit() {
     const { skills } = this.state;
@@ -285,9 +310,34 @@ class Resume extends Component {
               useChipsForPreview
               onChange={(files) => this.setResume(files[0])}
             />
-            <Button onClick={() => this.uploadResume()}>Submit resume</Button>
+            <br/>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => this.uploadResume()}
+            >
+              Submit resume
+            </Button>
           </Card>
         </PageBody>
+        <Grow in={this.state.openSnackBar == true}>
+          <Snackbar anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                    open={this.state.openSnackBar == true}
+                    onClose={this.handleSnackbarClose}
+          >
+              
+            <MuiAlert elevation={6}
+                      variant="filled"
+                      onClose={this.handleSnackbarClose}
+                      severity={this.state.typeSnackBar == "loading" ? "info" :
+                                (this.state.typeSnackBar == "error" ? "error" :
+                                (this.state.typeSnackBar == "success" ? "success" : ""))}>
+              {this.state.typeSnackBar == "loading" ? "Loading..." :
+                (this.state.typeSnackBar == "error" ? "There was an error uploading the file." :
+                (this.state.typeSnackBar == "success" ? `The file '${this.state.resumeFile.name}' was successfully uploaded.` : ""))}
+            </MuiAlert>
+          </Snackbar>
+        </Grow>
       </>
     );
   }
