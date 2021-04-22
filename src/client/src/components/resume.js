@@ -14,9 +14,7 @@ import {
   OutlinedInput,
   Toolbar,
   Snackbar,
-  Alert,
   Grow,
-  Collapse,
 } from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles';
 import './styles/resume.css';
@@ -26,8 +24,7 @@ import EditIcon from '@material-ui/icons/Edit';
 import CancelIcon from '@material-ui/icons/Cancel';
 import SaveIcon from '@material-ui/icons/Save';
 import AddIcon from '@material-ui/icons/Add';
-import CloseIcon from '@material-ui/icons/Close';
-import MuiAlert from '@material-ui/lab/Alert'
+import MuiAlert from '@material-ui/lab/Alert';
 
 const styles = (theme) => ({
   resumeUploadCard: {
@@ -52,7 +49,7 @@ class Resume extends Component {
       skills: undefined,
       isEditing: false,
       editedSkills: undefined,
-      openSnackBar: null,
+      openSnackBar: false,
       typeSnackBar: "loading"
     };
   }
@@ -126,6 +123,7 @@ class Resume extends Component {
   }
   
   handleSnackbarClose = (event, reason) => {
+    if(reason == "clickaway") return;
     this.setState({ openSnackBar: false });
   };
 
@@ -325,7 +323,6 @@ class Resume extends Component {
                     open={this.state.openSnackBar == true}
                     onClose={this.handleSnackbarClose}
           >
-              
             <MuiAlert elevation={6}
                       variant="filled"
                       onClose={this.handleSnackbarClose}

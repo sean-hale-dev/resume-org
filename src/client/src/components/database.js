@@ -13,6 +13,8 @@ import {
   Toolbar,
   Typography,
   Link,
+  Snackbar,
+  Grow,
 } from '@material-ui/core';
 import React, { Component } from 'react';
 import Header from './shared/header.js';
@@ -23,6 +25,7 @@ import { withStyles } from '@material-ui/core/styles';
 import { grey } from '@material-ui/core/colors';
 import axios from 'axios';
 import SearchBar from './shared/searchBar.js';
+import MuiAlert from '@material-ui/lab/Alert';
 
 
 const DUMMY_DATA = [
@@ -91,8 +94,8 @@ class Database extends Component {
     this.state = {
       searchResults: [],
       // searchText: "",
-      openSnackBar: null,
-      typeSnackBar: "loading",
+      openSnackBar: false,
+      typeSnackBar: "",
       snackBarText: ""
     };
     this.handleSearch.bind(this);
@@ -101,8 +104,12 @@ class Database extends Component {
   handleSearch(searchText) {
     // const { searchText } = this.state;
     console.log(`Searching for ${searchText}`);
+    this.setState({
+        openSnackBar: true,
+        typeSnackBar: "searching",
+        snackBarText: "Searching..."
+    });
     axios.post(`http://${window.location.hostname}:8080/resume-search`, {queryString: searchText}).then(res => {
-      console.log(res.data.message);
       this.setState({
         searchResults: res.data.resumes.map((data, index) => ({
           name: data.employee || "Unknown Employee",
@@ -111,12 +118,26 @@ class Database extends Component {
           experience: data.experience || "Unknown",
           index,
           employeeID: data.employeeID || "",
-        }))
-      })
+        })),
+        openSnackBar: true,
+          typeSnackBar: res.data.status == 0 ? "success" : "error",
+          snackBarText: res.data.message
+      });
     })
+    .catch((err) => {
+      this.setState({
+        openSnackBar: true,
+        typeSnackBar: "error",
+        snackBarText: "Search failed - the server did not respond."
+      });
+      console.error(err);
+    });
   }
 
-  
+  handleSnackbarClose = (event, reason) => {
+    if(reason == "clickaway") return;
+    this.setState({ openSnackBar: false });
+  };
 
   handleSortSelect(selectedSort) {
 
@@ -216,6 +237,21 @@ class Database extends Component {
             ))}
           </Card>
         </PageBody>
+        <Grow in={this.state.openSnackBar == true}>
+          <Snackbar anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                    open={this.state.openSnackBar == true}
+                    onClose={this.handleSnackbarClose}
+          >
+            <MuiAlert elevation={6}
+                      variant="filled"
+                      onClose={this.handleSnackbarClose}
+                      severity={this.state.typeSnackBar == "searching" ? "info" :
+                                (this.state.typeSnackBar == "error" ? "error" :
+                                (this.state.typeSnackBar == "success" ? "success" : ""))}>
+              {this.state.snackBarText}
+            </MuiAlert>
+          </Snackbar>
+        </Grow>
       </>
     );
   }

@@ -468,7 +468,7 @@ function resumeSearch(searchString, db, res) {
 
       // Upon all promises resolving, send the return objs
       Promise.all(resumePromises).then((resumesObjs) => {
-        res.json({message: (resumeIDSet.status == 0 ? "Search completed." : resumeIDSet.message), resumes: resumesObjs});
+        res.json({status: resumeIDSet.status, message: (resumeIDSet.status == 0 ? `Search completed. Total results: ${resumesObjs.length}` : resumeIDSet.message.split("ERROR: ")[1]), resumes: resumesObjs});
       });
     });
   });
