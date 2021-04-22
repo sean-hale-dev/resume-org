@@ -1,4 +1,4 @@
-import { Accordion, AccordionDetails, AccordionSummary, Button, Card, FormControl, Grid, InputLabel, MenuItem, Select, TextField, Toolbar, Typography } from '@material-ui/core';
+import { Accordion, AccordionDetails, AccordionSummary, Button, Card, FormControl, Grid, InputLabel, MenuItem, Select, TextField, Toolbar, Typography, Snackbar, Grow } from '@material-ui/core';
 import React, { Component } from 'react';
 import Header from './shared/header.js'
 import SearchIcon from '@material-ui/icons/Search';
@@ -8,6 +8,7 @@ import { withStyles } from '@material-ui/core/styles';
 import { grey, red } from '@material-ui/core/colors';
 import SearchBar from './shared/searchBar.js';
 import axios from 'axios';
+import MuiAlert from '@material-ui/lab/Alert';
 
 
 const styles = theme => ({
@@ -35,18 +36,42 @@ class Reports extends Component {
   constructor(props) {
     super(props);
     this.state = {
+      openSnackBar: false,
+      typeSnackBar: "generating",
+      snackBarText: "Generating report..."
     }
   }
 
   handleSearch(searchText) {
     console.log(`Searching for ${searchText}`);
+    this.setState({
+      openSnackBar: true,
+      typeSnackBar: "generating",
+      snackBarText: "Generating report..."
+    });
     axios.post(`http://${window.location.hostname}:8080/resume-report`, {queryString: searchText}).then(res => {
       console.log(res);
       this.setState({
         result: res.data,
-      })
+        openSnackBar: true,
+        typeSnackBar: "success",
+        snackBarText: "Report generated."
+      });
     })
+    .catch((err) => {
+      this.setState({
+        openSnackBar: true,
+        typeSnackBar: "error",
+        snackBarText: "Could not generate report - the server did not respond."
+      });
+      console.error(err);
+    });
   }
+
+  handleSnackbarClose = (event, reason) => {
+    if(reason == "clickaway") return;
+    this.setState({ openSnackBar: false });
+  };
 
   render () {
     const { classes, userID } = this.props;
@@ -81,6 +106,21 @@ class Reports extends Component {
         </Card>
         }
       </PageBody>
+      <Grow in={this.state.openSnackBar == true}>
+          <Snackbar anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                    open={this.state.openSnackBar == true}
+                    onClose={this.handleSnackbarClose}
+          >
+            <MuiAlert elevation={6}
+                      variant="filled"
+                      onClose={this.handleSnackbarClose}
+                      severity={this.state.typeSnackBar == "generating" ? "info" :
+                                (this.state.typeSnackBar == "error" ? "error" :
+                                (this.state.typeSnackBar == "success" ? "success" : ""))}>
+              {this.state.snackBarText}
+            </MuiAlert>
+          </Snackbar>
+        </Grow>
     </>);
   }
 }
