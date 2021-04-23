@@ -16,6 +16,7 @@ import Database from './components/database';
 import Reports from './components/reports';
 import Login from './components/login';
 import Profile from './components/profile';
+import Admin from './components/admin';
 
 import { withCookies, Cookies } from 'react-cookie';
 
@@ -41,6 +42,7 @@ function App(props) {
               <Redirect to="/login" />
             </Route>
           }
+          <Route exact path="/admin" render={props => <Admin {...props} userID={userID} cookies={cookies}/>} />
         </Switch>
       </Router>
     </ThemeProvider>

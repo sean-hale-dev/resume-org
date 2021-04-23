@@ -11,6 +11,7 @@ const mongo_client = require('mongodb');
 // import search from './search.js';
 const search = require('./utils/search.js');
 const { strict } = require('assert');
+const { getClientPermissions, hasServerPermission, PERMISSION_LEVELS } = require('./utils/auth.js');
 
 // TODO: ADD AUTHENTICATION
 
@@ -211,12 +212,157 @@ mongo_client.connect(
 
     app.get('/getAllSearchableSkills', (req, res) => {
       getAllSearchableSkills(db, res);
-    })
+    });
+
+    /**
+     * Query items:
+     * @query userID Fully optional; userID to check
+     */
+    app.get('/getClientPermissions', (req, res) => {
+      const { userID } = req.query;
+      hasServerPermission(userID, db, '/getClientPermissions').then(authorized => {
+        if (authorized) {
+          getClientPermissions(userID, db).then(perms => res.json(perms));
+        } else {
+          res.json([]);
+        }
+      });
+    });
+
+    app.post('/adminGetProfiles', (req, res) => {
+      const { userID } = req.body;
+      console.log("Fetching all profiles");
+      hasServerPermission(userID, db, '/adminGetProfiles').then(authorized => {
+        if (authorized) {
+          console.log("Admin perms granted");
+          adminGetProfiles(db, res);
+        } else {
+          res.json([]);
+        }
+      });
+    });
+
+    app.post('/adminUpdateProfile', (req, res) => {
+      const { userID, targetUserID, updates } = req.body;
+      hasServerPermission(userID, db, '/adminUpdateProfile').then(authorized => {
+        if (authorized) {
+          adminUpdateProfile(db, res, targetUserID, updates);
+        } else {
+          res.json([]);
+        }
+      });
+    });
+
+    app.post('/adminDeleteProfile', (req, res) => {
+      const { userID, targetUserID } = req.body;
+      hasServerPermission(userID, db, '/adminDeleteProfile').then(authorized => {
+        if (authorized) {
+          adminDeleteProfile(db, res, targetUserID);
+        } else {
+          res.json([]);
+        }
+      });
+    });
 
     app.listen(port, () => {
       console.log(`Listening on *:${port}`);
     });
 });
+
+// Get list of all user profiles
+function adminGetProfiles(db, res) {
+  db.collection('employees').find({}).toArray((err, results) => {
+    // console.log(err);
+    // console.log(results);
+    if (err) {
+      res.json([]);
+    } else {
+      res.json(results);
+    }
+  })
+}
+
+/**
+ * Update an arbitrary user profile
+ * @param {mongo_client.Db} db 
+ * @param {*} res 
+ * @param {String} targetUserID 
+ * @param {Object} updates 
+ */
+function adminUpdateProfile(db, res, targetUserID, details) {
+  console.log(`Updating ${targetUserID} to ${JSON.stringify(details)}`);
+  targetUserID = `${targetUserID}`;
+  const updates = {};
+  if (details.name) updates.name = `${details.name}`;
+  if (details.yearsExperience) updates.yearsExperience = `${details.yearsExperience}`;
+  if (details.position) updates.position = `${details.position}`;
+  if (details.role && PERMISSION_LEVELS[details.role] !== undefined) updates.role = `${details.role}`;
+  // TODO: Add update user ID functionality
+  const updateDB = async () => {
+    if (Object.keys(updates).length) {
+      await db.collection('employees').updateOne(
+        { userID: targetUserID },
+        {
+          $set: updates,
+        }
+      )
+    }
+    if (details.userID) {
+      const newUserID = `${details.userID}`;
+      const resumeUpdatePromises = [];
+      resumeUpdatePromises.push(db.collection('employees').updateOne(
+        { userID: targetUserID },
+        {
+          $set: {userID: newUserID},
+        }
+      ));
+      resumeUpdatePromises.push(db.collection('resumes').updateOne(
+        { employee: targetUserID },
+        {
+          $set: {employee: newUserID},
+        }
+      ));
+      await Promise.all(resumeUpdatePromises);
+    }
+  }
+  updateDB().then(() => {
+    adminGetProfiles(db, res);
+  })
+}
+
+/**
+ * Delete an arbitrary user profile
+ * @param {mongo_client.Db} db 
+ * @param {*} res 
+ * @param {String} targetUserID 
+ */
+function adminDeleteProfile(db, res, targetUserID) {
+  console.log(`Attempting to delete ${targetUserID}`);
+  db.collection('resumes').findOne({employee: targetUserID}).then(resume => {
+    console.log("Resume to delete:");
+    console.log(resume);
+    const employeeDeletionPromises = [];
+    if (resume && Array.isArray(resume.skills)) {
+      console.log(`Removing employee ${resume.employee}'s resume from skills: ${resume.skills.join(", ")}`)
+      employeeDeletionPromises.push(
+        db.collection('skill_assoc').updateMany(
+          {name: {$in: resume.skills}},
+          {$pull: {resumes: resume._id}}
+        )
+      );
+    }
+    if (resume) {
+      console.log(`Removing employee ${resume.employee}'s resume`);
+      employeeDeletionPromises.push(db.collection('resumes').deleteOne({_id: resume._id}));
+    }
+    employeeDeletionPromises.push(
+      db.collection('employees').deleteOne({userID: targetUserID})
+    );
+    Promise.all(employeeDeletionPromises).then(() => {
+      adminGetProfiles(db, res);
+    })
+  })
+}
 
 // Get list of all skills for searching
 function getAllSearchableSkills(db, res) {
