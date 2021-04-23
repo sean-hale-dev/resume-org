@@ -457,17 +457,18 @@ function resumeSearch(searchString, db, res) {
     });
 
   search.search(searchString).then((resumeIDSet) => {
-    const resumeGetPromises = [...resumeIDSet.payload].map((id) =>
-      db.collection('resumes').findOne({ _id: new mongo_client.ObjectId(id) })
-    );
-
-    // Generate employe return objs
+    const resumeGetPromises = resumeIDSet.status == 0 ?
+                              [...resumeIDSet.payload].map((id) =>
+                                db.collection('resumes').findOne({ _id: new mongo_client.ObjectId(id) })
+                              ) :
+                              new Array;
+    // Generate employee return objs
     Promise.all(resumeGetPromises).then((resumes) => {
       resumePromises = resumes.map((resume) => resumeLookup(resume._id));
 
       // Upon all promises resolving, send the return objs
       Promise.all(resumePromises).then((resumesObjs) => {
-        res.json(resumesObjs);
+        res.json({status: resumeIDSet.status, message: (resumeIDSet.status == 0 ? `Search completed. Total results: ${resumesObjs.length}` : resumeIDSet.message.split("ERROR: ")[1]), resumes: resumesObjs});
       });
     });
   });
