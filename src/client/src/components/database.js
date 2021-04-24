@@ -109,6 +109,7 @@ class Database extends Component {
 
   openResumeDialog = (employeeID) => {
     console.log(employeeID);
+    console.log(window.location.hostname);
     this.setState({
       resumeDialogOpen: true,
       resumeDialogTarget: employeeID,
@@ -320,11 +321,22 @@ class Database extends Component {
         >
           <DialogContent>
             <DocViewer
+              style={{ minHeight: '100vh' }}
+              config={{
+                header: {
+                  disableHeader: true,
+                },
+              }}
               pluginRenderers={DocViewerRenderers}
               documents={[
                 {
-                  uri: `http://${window.location.hostname}:8080/api/resume-download?employee=${this.state.resumeDialogTarget}`,
-                  // uri: `http://http://ec2-54-91-125-216.compute-1.amazonaws.com/api/resume-download?employee=${this.state.resumeDialogTarget}`,
+                  uri: `http://${
+                    window.location.hostname === 'localhost'
+                      ? 'ec2-54-91-125-216.compute-1.amazonaws.com'
+                      : window.location.hostname
+                  }/api/resume-download?employee=${
+                    this.state.resumeDialogTarget
+                  }`,
                 },
               ]}
             />
