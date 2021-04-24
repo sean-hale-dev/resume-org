@@ -35,27 +35,6 @@ import SearchBar from './shared/searchBar.js';
 import MuiAlert from '@material-ui/lab/Alert';
 import DocViewer, { DocViewerRenderers } from 'react-doc-viewer';
 
-const DUMMY_DATA = [
-  {
-    name: 'Emma Example',
-    position: 'Software Engineer',
-    experience: 10,
-    matchedSkills: ['Angular', 'JavaScript'],
-  },
-  {
-    name: 'Samuel Sample',
-    position: 'Web Developer',
-    experience: 8,
-    matchedSkills: ['React', 'JavaScript'],
-  },
-  {
-    name: 'Timothy Test',
-    position: 'Junior Web Developer',
-    experience: 3,
-    matchedSkills: ['Angular', 'React', 'JavaScript'],
-  },
-];
-
 const styles = (theme) => ({
   searchField: {
     width: '75%',
@@ -160,6 +139,11 @@ class Database extends Component {
           snackBarText: 'Search failed - the server did not respond.',
         });
         console.error(err);
+      })
+      .finally(() => {
+        setTimeout(() => {
+          this.handleSnackbarClose(null, null);
+        }, 5000);
       });
   }
 
