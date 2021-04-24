@@ -2,6 +2,7 @@ import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
+  Box,
   Button,
   Card,
   Dialog,
@@ -10,6 +11,7 @@ import {
   Slide,
   FormControl,
   Grid,
+  IconButton,
   InputLabel,
   MenuItem,
   Select,
@@ -23,6 +25,7 @@ import {
 import React, { Component } from 'react';
 import Header from './shared/header.js';
 import SearchIcon from '@material-ui/icons/Search';
+import CloseIcon from '@material-ui/icons/Close';
 import ArrowForwardIcon from '@material-ui/icons/ArrowForward';
 import PageBody from './shared/pagebody.js';
 import { withStyles } from '@material-ui/core/styles';
@@ -320,6 +323,11 @@ class Database extends Component {
           fullScreen
         >
           <DialogContent>
+            <Box textAlign="right">
+              <IconButton onClick={this.closeResumeDialog}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
             <DocViewer
               style={{ minHeight: '100vh' }}
               config={{
