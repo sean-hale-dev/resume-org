@@ -50,7 +50,7 @@ class Resume extends Component {
       isEditing: false,
       editedSkills: undefined,
       openSnackBar: false,
-      typeSnackBar: "loading"
+      typeSnackBar: 'loading',
     };
   }
 
@@ -58,7 +58,7 @@ class Resume extends Component {
     const { userID } = this.props;
     if (!userID) return;
     axios
-      .post(`http://${window.location.hostname}:8080/getResumeSkills`, {
+      .post(`http://${window.location.hostname}:8080/api/getResumeSkills`, {
         userID,
       })
       .then((res) => {
@@ -87,14 +87,14 @@ class Resume extends Component {
       );
       this.setState({
         openSnackBar: true,
-        typeSnackBar: "loading"
+        typeSnackBar: 'loading',
       });
       var formData = new FormData();
       formData.append('resume', this.state.resumeFile);
       formData.append('userID', this.props.userID);
       axios
         .post(
-          `http://${window.location.hostname}:8080/resume-upload`,
+          `http://${window.location.hostname}:8080/api/resume-upload`,
           formData,
           {
             headers: {
@@ -106,14 +106,14 @@ class Resume extends Component {
           this.setState({
             skills: res.data && res.data.skills ? res.data.skills.sort() : [],
             openSnackBar: true,
-            typeSnackBar: "success"
+            typeSnackBar: 'success',
           });
           console.log('skills: ', this.state.skills);
         })
         .catch((err) => {
           this.setState({
             openSnackBar: true,
-            typeSnackBar: "error"
+            typeSnackBar: 'error',
           });
           console.error(err);
         });
@@ -121,9 +121,9 @@ class Resume extends Component {
       console.log('Upload Fail - File not defined');
     }
   }
-  
+
   handleSnackbarClose = (event, reason) => {
-    if(reason == "clickaway") return;
+    if (reason == 'clickaway') return;
     this.setState({ openSnackBar: false });
   };
 
@@ -165,12 +165,17 @@ class Resume extends Component {
     const { editedSkills } = this.state;
     const { userID } = this.props;
     // TODO: Send data to server
-    axios.post(`http://${window.location.hostname}:8080/updateResumeSkills`, {
-      userID,
-      skills: [
-        ...new Set(editedSkills ? editedSkills.filter((skill) => skill).sort() : []),
-      ],
-    });
+    axios.post(
+      `http://${window.location.hostname}:8080/api/updateResumeSkills`,
+      {
+        userID,
+        skills: [
+          ...new Set(
+            editedSkills ? editedSkills.filter((skill) => skill).sort() : []
+          ),
+        ],
+      }
+    );
     this.setState({
       isEditing: false,
       skills: editedSkills ? editedSkills.map((skill) => skill).sort() : [],
@@ -308,7 +313,7 @@ class Resume extends Component {
               useChipsForPreview
               onChange={(files) => this.setResume(files[0])}
             />
-            <br/>
+            <br />
             <Button
               variant="contained"
               color="primary"
@@ -319,19 +324,32 @@ class Resume extends Component {
           </Card>
         </PageBody>
         <Grow in={this.state.openSnackBar == true}>
-          <Snackbar anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-                    open={this.state.openSnackBar == true}
-                    onClose={this.handleSnackbarClose}
+          <Snackbar
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            open={this.state.openSnackBar == true}
+            onClose={this.handleSnackbarClose}
           >
-            <MuiAlert elevation={6}
-                      variant="filled"
-                      onClose={this.handleSnackbarClose}
-                      severity={this.state.typeSnackBar == "loading" ? "info" :
-                                (this.state.typeSnackBar == "error" ? "error" :
-                                (this.state.typeSnackBar == "success" ? "success" : ""))}>
-              {this.state.typeSnackBar == "loading" ? "Loading..." :
-                (this.state.typeSnackBar == "error" ? "There was an error uploading the file." :
-                (this.state.typeSnackBar == "success" ? `The file '${this.state.resumeFile.name}' was successfully uploaded.` : ""))}
+            <MuiAlert
+              elevation={6}
+              variant="filled"
+              onClose={this.handleSnackbarClose}
+              severity={
+                this.state.typeSnackBar == 'loading'
+                  ? 'info'
+                  : this.state.typeSnackBar == 'error'
+                  ? 'error'
+                  : this.state.typeSnackBar == 'success'
+                  ? 'success'
+                  : ''
+              }
+            >
+              {this.state.typeSnackBar == 'loading'
+                ? 'Loading...'
+                : this.state.typeSnackBar == 'error'
+                ? 'There was an error uploading the file.'
+                : this.state.typeSnackBar == 'success'
+                ? `The file '${this.state.resumeFile.name}' was successfully uploaded.`
+                : ''}
             </MuiAlert>
           </Snackbar>
         </Grow>

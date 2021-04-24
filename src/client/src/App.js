@@ -7,8 +7,8 @@ import {
   Switch,
   Route,
   Link,
-  Redirect
-} from "react-router-dom";
+  Redirect,
+} from 'react-router-dom';
 import Header from './components/shared/header';
 import Home from './components/homepage';
 import Resume from './components/resume';
@@ -21,30 +21,52 @@ import { withCookies, Cookies } from 'react-cookie';
 
 function App(props) {
   const { cookies } = props;
-  const userID = cookies.get("userID");
+  const userID = cookies.get('userID');
   return (
     <ThemeProvider theme={resume_org_theme}>
       <Router>
         <Switch>
           {/* <Route exact path="/" render={props => <Home {...props} userID={userID} />} /> */}
           <Route exact path="/">
-            <Redirect to={userID ? "/resume" : "/login"} />
+            <Redirect to={userID ? '/resume' : '/login'} />
           </Route>
-          <Route exact path="/resume" render={props => <Resume {...props} userID={userID} />} />
-          <Route exact path="/database" render={props => <Database {...props} userID={userID} />}/>
-          <Route exact path="/reports" render={props => <Reports {...props} userID={userID} />}/>
-          <Route exact path="/login" render={props => <Login {...props} userID={userID} cookies={cookies}/>}/>
-          {userID ?
-            <Route exact path="/profile" render={props => <Profile {...props} userID={userID}/>}/>
-            :
+          <Route
+            exact
+            path="/resume"
+            render={(props) => <Resume {...props} userID={userID} />}
+          />
+          <Route
+            exact
+            path="/database"
+            render={(props) => <Database {...props} userID={userID} />}
+          />
+          <Route
+            exact
+            path="/reports"
+            render={(props) => <Reports {...props} userID={userID} />}
+          />
+          <Route
+            exact
+            path="/login"
+            render={(props) => (
+              <Login {...props} userID={userID} cookies={cookies} />
+            )}
+          />
+          {userID ? (
+            <Route
+              exact
+              path="/profile"
+              render={(props) => <Profile {...props} userID={userID} />}
+            />
+          ) : (
             <Route exact path="/profile">
               <Redirect to="/login" />
             </Route>
-          }
+          )}
         </Switch>
       </Router>
     </ThemeProvider>
-  )
+  );
   // return (
   //   <div className="App">
   //     <header className="App-header">
