@@ -8,7 +8,6 @@ import {
   Card,
   Typography,
   Grid,
-  TextField,
   InputAdornment,
   FormControl,
   OutlinedInput,
@@ -18,13 +17,13 @@ import {
 } from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles';
 import './styles/resume.css';
-import { grey } from '@material-ui/core/colors';
 import axios from 'axios';
 import EditIcon from '@material-ui/icons/Edit';
 import CancelIcon from '@material-ui/icons/Cancel';
 import SaveIcon from '@material-ui/icons/Save';
 import AddIcon from '@material-ui/icons/Add';
 import MuiAlert from '@material-ui/lab/Alert';
+import { ResumeDisplay } from './shared/ResumeDisplay';
 
 const styles = (theme) => ({
   resumeUploadCard: {
@@ -50,7 +49,9 @@ class Resume extends Component {
       isEditing: false,
       editedSkills: undefined,
       openSnackBar: false,
-      typeSnackBar: "loading"
+      typeSnackBar: 'loading',
+      resumeDialogOpen: false,
+      resumeDialogTarget: '',
     };
   }
 
@@ -58,7 +59,7 @@ class Resume extends Component {
     const { userID } = this.props;
     if (!userID) return;
     axios
-      .post(`http://${window.location.hostname}:8080/getResumeSkills`, {
+      .post(`http://${window.location.hostname}:8080/api/getResumeSkills`, {
         userID,
       })
       .then((res) => {
@@ -68,33 +69,51 @@ class Resume extends Component {
       });
   }
 
+  openResumeDialog = (employeeID) => {
+    this.setState({
+      resumeDialogOpen: true,
+      resumeDialogTarget: employeeID,
+    });
+  };
+
+  closeResumeDialog = () => {
+    this.setState({
+      resumeDialogOpen: false,
+      resumeDialogTarget: '',
+    });
+  };
+
   setResume(file) {
-    if (file != undefined) {
+    if (file !== undefined) {
       console.log('Set Success - Initial file: ', this.state.resumeFile);
-      this.state.resumeFile = file;
+      this.setState({
+        resumeFile: file,
+      });
       console.log('Set Success - Uploaded file: ', this.state.resumeFile);
     } else {
       console.log('Set Fail - No file yet');
-      this.state.resumeFile = undefined;
+      this.setState({
+        resumeFile: undefined,
+      });
     }
   }
 
   uploadResume() {
-    if (this.state.resumeFile != undefined) {
+    if (this.state.resumeFile !== undefined) {
       console.log(
         'Upload Success- Will post the file: ',
         this.state.resumeFile
       );
       this.setState({
         openSnackBar: true,
-        typeSnackBar: "loading"
+        typeSnackBar: 'loading',
       });
       var formData = new FormData();
       formData.append('resume', this.state.resumeFile);
       formData.append('userID', this.props.userID);
       axios
         .post(
-          `http://${window.location.hostname}:8080/resume-upload`,
+          `http://${window.location.hostname}:8080/api/resume-upload`,
           formData,
           {
             headers: {
@@ -106,14 +125,14 @@ class Resume extends Component {
           this.setState({
             skills: res.data && res.data.skills ? res.data.skills.sort() : [],
             openSnackBar: true,
-            typeSnackBar: "success"
+            typeSnackBar: 'success',
           });
           console.log('skills: ', this.state.skills);
         })
         .catch((err) => {
           this.setState({
             openSnackBar: true,
-            typeSnackBar: "error"
+            typeSnackBar: 'error',
           });
           console.error(err);
         });
@@ -121,9 +140,9 @@ class Resume extends Component {
       console.log('Upload Fail - File not defined');
     }
   }
-  
+
   handleSnackbarClose = (event, reason) => {
-    if(reason == "clickaway") return;
+    if (reason === 'clickaway') return;
     this.setState({ openSnackBar: false });
   };
 
@@ -165,12 +184,17 @@ class Resume extends Component {
     const { editedSkills } = this.state;
     const { userID } = this.props;
     // TODO: Send data to server
-    axios.post(`http://${window.location.hostname}:8080/updateResumeSkills`, {
-      userID,
-      skills: [
-        ...new Set(editedSkills ? editedSkills.filter((skill) => skill).sort() : []),
-      ],
-    });
+    axios.post(
+      `http://${window.location.hostname}:8080/api/updateResumeSkills`,
+      {
+        userID,
+        skills: [
+          ...new Set(
+            editedSkills ? editedSkills.filter((skill) => skill).sort() : []
+          ),
+        ],
+      }
+    );
     this.setState({
       isEditing: false,
       skills: editedSkills ? editedSkills.map((skill) => skill).sort() : [],
@@ -178,7 +202,7 @@ class Resume extends Component {
   }
 
   render() {
-    const { classes, userID } = this.props;
+    const { classes, userID, clientPermissions } = this.props;
     const { skills, editedSkills, isEditing } = this.state;
     // For comparing skills only
     const filteredSkillsSet = new Set(
@@ -189,7 +213,7 @@ class Resume extends Component {
     );
 
     const haveSkillsChanged = !(
-      filteredSkillsSet.size == filteredEditedSkillsSet.size &&
+      filteredSkillsSet.size === filteredEditedSkillsSet.size &&
       [...filteredSkillsSet].reduce(
         (allSkillsMatch, skill) =>
           allSkillsMatch &&
@@ -201,7 +225,11 @@ class Resume extends Component {
     // console.log(editedSkills);
     return (
       <>
-        <Header selectedPage="Your Resume" userID={userID} />
+        <Header
+          selectedPage="Your Resume"
+          userID={userID}
+          clientPermissions={clientPermissions}
+        />
         <PageBody>
           {skills && skills.length > 0 && (
             <Card>
@@ -308,33 +336,61 @@ class Resume extends Component {
               useChipsForPreview
               onChange={(files) => this.setResume(files[0])}
             />
-            <br/>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => this.uploadResume()}
-            >
-              Submit resume
-            </Button>
+            <br />
+            <Grid container justify="space-between">
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => this.uploadResume()}
+              >
+                Submit resume
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => this.openResumeDialog(userID)}
+              >
+                View your resume
+              </Button>
+            </Grid>
           </Card>
         </PageBody>
-        <Grow in={this.state.openSnackBar == true}>
-          <Snackbar anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-                    open={this.state.openSnackBar == true}
-                    onClose={this.handleSnackbarClose}
+        <Grow in={this.state.openSnackBar === true}>
+          <Snackbar
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            open={this.state.openSnackBar === true}
+            onClose={this.handleSnackbarClose}
           >
-            <MuiAlert elevation={6}
-                      variant="filled"
-                      onClose={this.handleSnackbarClose}
-                      severity={this.state.typeSnackBar == "loading" ? "info" :
-                                (this.state.typeSnackBar == "error" ? "error" :
-                                (this.state.typeSnackBar == "success" ? "success" : ""))}>
-              {this.state.typeSnackBar == "loading" ? "Loading..." :
-                (this.state.typeSnackBar == "error" ? "There was an error uploading the file." :
-                (this.state.typeSnackBar == "success" ? `The file '${this.state.resumeFile.name}' was successfully uploaded.` : ""))}
+            <MuiAlert
+              elevation={6}
+              variant="filled"
+              onClose={this.handleSnackbarClose}
+              severity={
+                this.state.typeSnackBar === 'loading'
+                  ? 'info'
+                  : this.state.typeSnackBar === 'error'
+                  ? 'error'
+                  : this.state.typeSnackBar === 'success'
+                  ? 'success'
+                  : ''
+              }
+            >
+              {this.state.typeSnackBar === 'loading'
+                ? 'Loading...'
+                : this.state.typeSnackBar === 'error'
+                ? 'There was an error uploading the file.'
+                : this.state.typeSnackBar === 'success'
+                ? `The file '${this.state.resumeFile.name}' was successfully uploaded.`
+                : ''}
             </MuiAlert>
           </Snackbar>
         </Grow>
+
+        <ResumeDisplay
+          open={this.state.resumeDialogOpen}
+          toClose={this.closeResumeDialog}
+          target={this.state.resumeDialogTarget}
+        />
       </>
     );
   }
