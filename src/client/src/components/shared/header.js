@@ -10,7 +10,6 @@ import MenuIcon from '@material-ui/icons/Menu';
 import Typography from '@material-ui/core/Typography';
 import Grid from '@material-ui/core/Grid';
 import Link from '@material-ui/core/Link';
-import axios from 'axios';
 
 const PAGES = [
   {
@@ -40,12 +39,8 @@ class Header extends Component {
     super(props);
     this.state = {
       open: false,
-      // clientPermissions: {},
-      // clientPermissionUserID: props.userID,
     };
   }
-
-  
 
   toggleDrawer(open = undefined) {
     return (event) => {
@@ -65,48 +60,54 @@ class Header extends Component {
   }
 
   render() {
-    const { open/*, clientPermissions, clientPermissionUserID*/ } = this.state;
+    const { open } = this.state;
     const { selectedPage, userID, clientPermissions } = this.props;
-    // if (userID != clientPermissionUserID) {
-    //   this.updatePermissions();
-    // }
     console.log(`Selected page: ${selectedPage}`);
     return (
       <AppBar position="static">
         <Grid container>
           <Grid item xs={2}>
             <Toolbar>
-              {PAGES.filter(page => clientPermissions[page.link]).length > 0 && <><SwipeableDrawer
-                anchor={'left'}
-                open={open}
-                onClose={this.toggleDrawer(false)}
-                onOpen={this.toggleDrawer(true)}
-              >
-                <List style={{ width: '250px' }}>
-                  {PAGES.filter(page => clientPermissions[page.link]).map((page) => (
-                    <Link href={page.link} color="inherit">
-                      <ListItem button key={page.title}>
-                        <ListItemText
-                          disableTypography
-                          primary={page.title}
-                          style={{
-                            fontWeight:
-                              selectedPage === page.title ? 'bold' : 'normal',
-                          }}
-                        />
-                      </ListItem>
-                    </Link>
-                  ))}
-                </List>
-              </SwipeableDrawer>
-              <IconButton
-                edge="start"
-                color="inherit"
-                aria-label="menu"
-                onClick={this.toggleDrawer()}
-              >
-                <MenuIcon />
-              </IconButton></>}
+              {PAGES.filter((page) => clientPermissions[page.link]).length >
+                0 && (
+                <>
+                  <SwipeableDrawer
+                    anchor={'left'}
+                    open={open}
+                    onClose={this.toggleDrawer(false)}
+                    onOpen={this.toggleDrawer(true)}
+                  >
+                    <List style={{ width: '250px' }}>
+                      {PAGES.filter((page) => clientPermissions[page.link]).map(
+                        (page) => (
+                          <Link href={page.link} color="inherit">
+                            <ListItem button key={page.title}>
+                              <ListItemText
+                                disableTypography
+                                primary={page.title}
+                                style={{
+                                  fontWeight:
+                                    selectedPage === page.title
+                                      ? 'bold'
+                                      : 'normal',
+                                }}
+                              />
+                            </ListItem>
+                          </Link>
+                        )
+                      )}
+                    </List>
+                  </SwipeableDrawer>
+                  <IconButton
+                    edge="start"
+                    color="inherit"
+                    aria-label="menu"
+                    onClick={this.toggleDrawer()}
+                  >
+                    <MenuIcon />
+                  </IconButton>
+                </>
+              )}
             </Toolbar>
           </Grid>
           <Grid item xs={8}>
@@ -145,4 +146,3 @@ class Header extends Component {
 }
 
 export default Header;
-

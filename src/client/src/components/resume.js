@@ -104,7 +104,6 @@ class Resume extends Component {
   }
 
   uploadResume() {
-    const {userID} = this.props;
     if (this.state.resumeFile !== undefined) {
       console.log(
         'Upload Success- Will post the file: ',
@@ -231,7 +230,11 @@ class Resume extends Component {
     // console.log(editedSkills);
     return (
       <>
-        <Header selectedPage="Your Resume" userID={userID} clientPermissions={clientPermissions} />
+        <Header
+          selectedPage="Your Resume"
+          userID={userID}
+          clientPermissions={clientPermissions}
+        />
         <PageBody>
           {skills && skills.length > 0 && (
             <Card>
