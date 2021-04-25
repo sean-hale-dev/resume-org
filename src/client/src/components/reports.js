@@ -136,7 +136,7 @@ class Reports extends Component {
                     {Object.entries(result.individualSkillMatches).length > 1 && 
                     result.strictMatchCount !== undefined &&
                       <Typography>
-                        {result.strictMatchCount} strictly match
+                        {result.strictMatchCount}{result.strictMatchCount !== result.looseMatchCount && ' strictly'} match
                         {result.strictMatchCount === 1 ? 'es' : ''} the query (
                         {(
                           (100.0 * result.strictMatchCount) /
