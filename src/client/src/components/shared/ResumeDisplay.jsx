@@ -1,4 +1,11 @@
-import { Dialog, DialogContent, Box, IconButton } from '@material-ui/core';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  Box,
+  IconButton,
+  Link,
+} from '@material-ui/core';
 import DocViewer, { DocViewerRenderers } from 'react-doc-viewer';
 import CloseIcon from '@material-ui/icons/Close';
 
@@ -12,6 +19,19 @@ const ResumeDisplay = (props) => {
     >
       <DialogContent>
         <Box textAlign="right">
+          <Link
+            href={`http://${
+              window.location.hostname === 'localhost'
+                ? 'localhost:8080'
+                : window.location.hostname
+            }/api/resume-download?employee=${props.target}`}
+            color="inherit"
+          >
+            <Button color="primary" variant="contained">
+              Download resume
+            </Button>
+          </Link>
+
           <IconButton onClick={props.toClose}>
             <CloseIcon />
           </IconButton>
