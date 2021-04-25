@@ -1,12 +1,8 @@
 import {
-  Box,
   Button,
   Card,
-  Dialog,
-  DialogContent,
   FormControl,
   Grid,
-  IconButton,
   InputLabel,
   MenuItem,
   Select,
@@ -17,7 +13,6 @@ import {
 } from '@material-ui/core';
 import React, { Component } from 'react';
 import Header from './shared/header.js';
-import CloseIcon from '@material-ui/icons/Close';
 import ArrowForwardIcon from '@material-ui/icons/ArrowForward';
 import PageBody from './shared/pagebody.js';
 import { withStyles } from '@material-ui/core/styles';
@@ -25,7 +20,7 @@ import { grey } from '@material-ui/core/colors';
 import axios from 'axios';
 import SearchBar from './shared/searchBar.js';
 import MuiAlert from '@material-ui/lab/Alert';
-import DocViewer, { DocViewerRenderers } from 'react-doc-viewer';
+import { ResumeDisplay } from './shared/ResumeDisplay';
 
 const styles = (theme) => ({
   searchField: {
@@ -290,40 +285,11 @@ class Database extends Component {
             </MuiAlert>
           </Snackbar>
         </Grow>
-        <Dialog
+        <ResumeDisplay
           open={this.state.resumeDialogOpen}
-          onClose={this.closeResumeDialog}
-          aria-labelledby="resume-fileview-dialog"
-          fullScreen
-        >
-          <DialogContent>
-            <Box textAlign="right">
-              <IconButton onClick={this.closeResumeDialog}>
-                <CloseIcon />
-              </IconButton>
-            </Box>
-            <DocViewer
-              style={{ minHeight: '100vh' }}
-              config={{
-                header: {
-                  disableHeader: true,
-                },
-              }}
-              pluginRenderers={DocViewerRenderers}
-              documents={[
-                {
-                  uri: `http://${
-                    window.location.hostname === 'localhost'
-                      ? 'ec2-54-91-125-216.compute-1.amazonaws.com'
-                      : window.location.hostname
-                  }/api/resume-download?employee=${
-                    this.state.resumeDialogTarget
-                  }`,
-                },
-              ]}
-            />
-          </DialogContent>
-        </Dialog>
+          toClose={this.closeResumeDialog}
+          target={this.state.resumeDialogTarget}
+        />
       </>
     );
   }
