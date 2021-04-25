@@ -75,14 +75,19 @@ class SearchBar extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      searchText: (new URLSearchParams(useLocation().search)).get("searchText") || "",
+      searchText: (new URLSearchParams(props.location.search)).get("searchText") || "",
       searchOptions: [],
       activeOptions: [],
     };
   }
 
   componentDidMount() {
-    const {userID} = this.props;
+    const {userID, location} = this.props;
+    const {searchText} = this.state;
+    const { good, issues } = validateSearchQuery(searchText);
+    if (good && (new URLSearchParams(location.search)).get("autoSearch")) {
+      this.handleSearch();
+    }
     // TODO: Call server for this
     // const searchOptions = ["python", "angular", "react", "c", "d", "js", "mips assembly"];
     // this.setState({searchOptions}, this.updateSearchOptions);
@@ -133,8 +138,10 @@ class SearchBar extends Component {
   }
 
   setSearchText(searchText) {
+    console.log(`Setting search text to ${searchText}`);
+    const {location} = this.props;
     this.setState({searchText}, () => {
-      (new URLSearchParams(useLocation().search)).set("searchText", searchText);
+      (new URLSearchParams(location.search)).set("searchText", searchText);
       this.updateSearchOptions();
     })
   }
@@ -158,7 +165,7 @@ class SearchBar extends Component {
       // Cut last search term and replace
       const { searchText } = this.state;
       const lastTerm = this.getLastTerm(searchText);
-      if (!lastTerm || searchText.lastIndexOf(lastTerm) === -1) {
+      if (!lastTerm || searchText.toLowerCase().lastIndexOf(lastTerm) == -1) {
         // Handle select from empty string
         // this.setState(
         //   { searchText: searchText + newValue },
@@ -166,10 +173,7 @@ class SearchBar extends Component {
         // );
         this.setSearchText(searchText + newValue);
       } else {
-        const otherText = searchText.substring(
-          0,
-          searchText.lastIndexOf(lastTerm)
-        );
+        const otherText = searchText.substring(0, searchText.toLowerCase().lastIndexOf(lastTerm));
         // The multiple setState calls are necessary to deal with a buggy Autocomplete edge case where selecting an option but not updating
         // state causes the option to fill the text field rather than the correct controlled value.
         this.setState({ searchText: otherText }, () =>
@@ -185,8 +189,10 @@ class SearchBar extends Component {
 
   onSearchInputChange(event, newValue, reason) {
     // console.log(`Change ${reason}; newVal ${newValue}`);
-    if (reason === 'input')
-      this.setState({ searchText: newValue }, this.updateSearchOptions);
+    if (reason === 'input') {
+      // this.setState({ searchText: newValue }, this.updateSearchOptions);
+      this.setSearchText(newValue);
+    }
   }
 
   render() {

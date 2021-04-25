@@ -11,7 +11,7 @@ install_parser:
 	cd src/server/utils/parser && export SYSTEM_VERSION_COMPAT=1 && pipenv install && pipenv run resumeParser foobar --install
 
 install_parser_novenv:
-	cd src/server/utils/parser && pip3 install -r requirements.txt && pip3 install --user --editable .
+	cd src/server/utils/parser && pip3 install -r requirements.txt && pip3 install --user --editable . && resumeParser foobar --install
 
 install_server:
 	cd src/server && $(NODEPM) install

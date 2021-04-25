@@ -46,7 +46,6 @@ pytz==2021.1
 regex==2021.4.4
 requests==2.25.1
 requests-threads==0.1.1
--e git+git@github.com:sean-hale-dev/resume-org.git@93eb0a58b6555ead60d7edf510fb04fcb4ec66ca#egg=resumeParser&subdirectory=src/server/utils/parser
 six==1.12.0
 sortedcontainers==2.3.0
 soupsieve==2.2.1

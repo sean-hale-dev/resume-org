@@ -64,7 +64,10 @@ async function getClientPermissions(userID, db) {
  * @param {String} url Server endpoint
  */
 async function hasServerPermission(userID, db, url) {
-  if (MIN_SERVER_PERMISSIONS[url] === undefined) return false;
+  if (MIN_SERVER_PERMISSIONS[url] === undefined) {
+    console.log(`${userID} has insufficient permissions to access ${url}`);
+    return false;
+  }
   let clientPermissionLevel = NOT_LOGGED_IN_PERMISSION_LEVEL;
   if (userID) {
     const employee = await db.collection('employees').findOne({ userID: `${userID}` });
@@ -72,7 +75,13 @@ async function hasServerPermission(userID, db, url) {
       clientPermissionLevel = employee.role && PERMISSION_LEVELS[employee.role] !== undefined ? PERMISSION_LEVELS[employee.role] : PERMISSION_LEVELS["Employee"];
     }
   }
-  return clientPermissionLevel >= MIN_SERVER_PERMISSIONS[url];
+  const hasPermissions = clientPermissionLevel >= MIN_SERVER_PERMISSIONS[url];
+  if (hasPermissions) {
+    console.log(`${userID} has sufficient permissions to access ${url}`);
+  } else {
+    console.log(`${userID} has insufficient permissions to access ${url}`);
+  }
+  return hasPermissions;
 }
 
 exports.getClientPermissions = getClientPermissions;
