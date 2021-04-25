@@ -125,13 +125,13 @@ mongo_client.connect(
 
     app.post(endpointPrefix + '/resume-search', (req, res) => {
       const { userID } = req.body;
-      hasServerPermission(userID, db, '/getProfile').then(authorized => {
+      hasServerPermission(userID, db, '/resume-search').then(authorized => {
         if (authorized) {
           console.log('Searching');
           const queryString = req.body.queryString || '(c | !c)';
           resumeSearch(queryString, db, res);
         } else {
-          res.json({});
+          res.json([]);
         }
       });
     });
@@ -148,12 +148,6 @@ mongo_client.connect(
         }
       });
     });
-
-    // TEMP
-    // app.get(endpointPrefix + '/resume-report', (req, res) => {
-    //   const queryString = 'javascript & c';
-    //   generateReport(queryString, db, res);
-    // });
 
     // lets the client download a resume from the database
     app.get(endpointPrefix + '/resume-download', (req, res) => {
