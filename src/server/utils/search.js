@@ -333,10 +333,10 @@ const search = async (searchString) => {
   let response = {};
   if (process.env.MONGO_SEARCH_URI == null) {
     console.error(
-      '<SEARCH> ERROR: Unable to resolve MONGO_URI environmental variable... cannot connect to database'
+      '<SEARCH> ERROR: Unable to resolve MONGO_SEARCH_URI environmental variable... cannot connect to database'
     );
     response.status = -1;
-    response.message = 'ERROR: Missing MONGO_URI env. var';
+    response.message = 'ERROR: Missing MONGO_SEARCH_URI env. var';
 
     return response;
   }

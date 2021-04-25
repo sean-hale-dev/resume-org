@@ -1,11 +1,11 @@
-import React, { Children, Component } from 'react';
-import { withStyles } from '@material-ui/core/styles'
+import React from 'react';
+import { withStyles } from '@material-ui/core/styles';
 
-const styles = theme => ({
+const styles = (theme) => ({
   root: {
-    maxWidth: "900px",
-    margin: "auto",
-  }
+    maxWidth: '900px',
+    margin: 'auto',
+  },
 });
 
 /**
@@ -14,6 +14,7 @@ const styles = theme => ({
  */
 function PageBody(props) {
   const { classes, children } = props;
-  return <div className={classes.root}>{children}</div>
+  return <div className={classes.root}>{children}</div>;
 }
 export default withStyles(styles)(PageBody);
+
