@@ -356,8 +356,4 @@ const search = async (searchString) => {
   return response;
 };
 
-// let searchQuery = 'c | python';
-// console.log('Searching: ' + searchQuery);
-// search(searchQuery);
-
 exports.search = search;

@@ -23,7 +23,7 @@ mongo_client.connect(
   function (err, database) {
     if (err) throw err;
 
-    var db = database.db('resume_org');
+    const db = database.db('resume_org');
 
     console.log('Connected with MongoDB!');
 
@@ -123,6 +123,9 @@ mongo_client.connect(
       });
     });
 
+    /**
+     * @param {String} body.userID 
+     */
     app.post(endpointPrefix + '/resume-search', (req, res) => {
       const { userID } = req.body;
       hasServerPermission(userID, db, '/resume-search').then(authorized => {
@@ -136,6 +139,9 @@ mongo_client.connect(
       });
     });
 
+    /**
+     * @param {String} body.userID 
+     */
     app.post(endpointPrefix + '/resume-report', (req, res) => {
       const { userID } = req.body;
       hasServerPermission(userID, db, '/resume-report').then(authorized => {
@@ -195,12 +201,18 @@ mongo_client.connect(
       }
     });
 
+    /**
+     * @param {String} body.userID 
+     */
     app.post(endpointPrefix + '/login', (req, res) => {
       const { userID } = req.body;
       console.log(`Logging in ${userID}`);
       handleLogin(userID, db, res);
     });
 
+    /**
+     * @param {String} body.userID 
+     */
     app.post(endpointPrefix + '/getProfile', (req, res) => {
       const { userID } = req.body;
       hasServerPermission(userID, db, '/getProfile').then(authorized => {
@@ -212,6 +224,10 @@ mongo_client.connect(
       });
     });
 
+    /**
+     * @param {String} body.userID 
+     * @param {Object} body.details details to add to profile
+     */
     app.post(endpointPrefix + '/updateProfile', (req, res) => {
       const { userID, details } = req.body;
       hasServerPermission(userID, db, '/updateProfile').then(authorized => {
@@ -223,6 +239,9 @@ mongo_client.connect(
       });
     });
 
+    /**
+     * @param {String} body.userID 
+     */
     app.post(endpointPrefix + '/getResumeSkills', (req, res) => {
       const { userID } = req.body;
       hasServerPermission(userID, db, '/getResumeSkills').then(authorized => {
@@ -234,6 +253,10 @@ mongo_client.connect(
       });
     });
 
+    /**
+     * @param {String} body.userID 
+     * @param {Array} skills New list of skills
+     */
     app.post(endpointPrefix + '/updateResumeSkills', (req, res) => {
       const { userID, skills } = req.body;
       hasServerPermission(userID, db, '/updateResumeSkills').then(authorized => {
@@ -245,6 +268,9 @@ mongo_client.connect(
       });
     });
 
+    /**
+     * @param {String} body.userID 
+     */
     app.post(endpointPrefix + '/getAllSearchableSkills', (req, res) => {
       const {userID} = req.body;
       hasServerPermission(userID, db, '/getAllSearchableSkills').then(authorized => {
@@ -272,6 +298,9 @@ mongo_client.connect(
       });
     });
 
+    /**
+     * @param {String} body.userID 
+     */
     app.post('/adminGetProfiles', (req, res) => {
       const { userID } = req.body;
       console.log("Fetching all profiles");
@@ -285,6 +314,11 @@ mongo_client.connect(
       });
     });
 
+    /**
+     * @param {String} body.userID Your userID
+     * @param {String} body.targetUserID userID to update
+     * @param {Object} updates Profile updates
+     */
     app.post('/adminUpdateProfile', (req, res) => {
       const { userID, targetUserID, updates } = req.body;
       hasServerPermission(userID, db, '/adminUpdateProfile').then(authorized => {
@@ -296,6 +330,10 @@ mongo_client.connect(
       });
     });
 
+    /**
+     * @param {String} body.userID Your userID
+     * @param {String} body.targetUserID userID to delete
+     */
     app.post('/adminDeleteProfile', (req, res) => {
       const { userID, targetUserID } = req.body;
       hasServerPermission(userID, db, '/adminDeleteProfile').then(authorized => {
@@ -316,8 +354,6 @@ mongo_client.connect(
 // Get list of all user profiles
 function adminGetProfiles(db, res) {
   db.collection('employees').find({}).toArray((err, results) => {
-    // console.log(err);
-    // console.log(results);
     if (err) {
       res.json([]);
     } else {
@@ -425,7 +461,11 @@ function getAllSearchableSkills(db, res) {
     });
 }
 
-// Validate search query
+/**
+ * Validate search query parentheses
+ * @param {String} queryString 
+ * @returns Whether the query string has matching parentheses
+ */
 function validateSearchQueryParentheses(queryString) {
   if (typeof queryString !== 'string') {
     return false;
@@ -440,6 +480,11 @@ function validateSearchQueryParentheses(queryString) {
   return parenthesisTracker == 0;
 }
 
+/**
+ * Validate that the string has no macros
+ * @param {String} queryString 
+ * @returns Whether the string has any problematic search macros
+ */
 function validateSearchQueryMacros(queryString) {
   const regExpMacro = /\$\d*\$/; // Regular expression that matches search
   const queryStringMacros = queryString.match(regExpMacro);
@@ -447,14 +492,11 @@ function validateSearchQueryMacros(queryString) {
   return !queryStringMacros || queryStringMacros.length == 0;
 }
 
-// validateSearchQueryMacros("Simple String");
-// validateSearchQueryMacros("Simple String$100");
-// validateSearchQueryMacros("Simple String$100$eeee");
-// validateSearchQueryMacros("Simple String$100e$eeee");
-// validateSearchQueryMacros("Simple String$100$ee$24342$ee");
-// validateSearchQueryMacros("Simple String$10er0$ee$24342$ee");
-// validateSearchQueryMacros("Simple String$10er0$0$24342e$ee");
-
+/**
+ * Validate a query string
+ * @param {String} queryString 
+ * @returns Object{good: boolean, issues: Array} Whether the string is good, and any errors if present
+ */
 function validateSearchQuery(queryString) {
   const parenthesesGood = validateSearchQueryParentheses(queryString);
   const macrosGood = validateSearchQueryMacros(queryString);
@@ -466,10 +508,6 @@ function validateSearchQuery(queryString) {
 
 // Fetch resume skills by userID
 function getResumeSkillsByUserID(userID, db, res) {
-  // db.collection('employees')
-  //   .findOne({ userID })
-  //   .then((employee) => {
-  //     if (employee && employee.resume) {
   db.collection('resumes')
     .findOne({ employee: userID })
     .then((resume) => {
@@ -479,14 +517,9 @@ function getResumeSkillsByUserID(userID, db, res) {
         res.json({ skills: [] });
       }
     });
-  //   } else {
-  //     res.json({ skills: [] });
-  //   }
-  // });
 }
 
 // Update resume skills
-// TODO: Update this to not break searching
 function updateResumeSkillsByUserID(userID, skills, db, res) {
   // Filter skills to ensure no duplicates
   skills =
@@ -594,6 +627,7 @@ function handleLogin(userID, db, res) {
     });
 }
 
+// Get a user profile by userID
 function getProfile(userID, db, res) {
   db.collection('employees')
     .findOne({ userID })
@@ -608,7 +642,7 @@ function getProfile(userID, db, res) {
     });
 }
 
-// TODO: This should *definitely* have authentication
+// Update a user profile by userID
 function updateProfile(userID, details, db, res) {
   const updates = {};
   if (details.name !== undefined) updates.name = details.name;
@@ -744,11 +778,6 @@ function generateReport(searchString, db, res) {
     (term, index) => term || index == searchTerms.length - 1
   );
   const looseSearchString = trimmedSearchTerms.join(' | ');
-  // if (!validation.good) {
-  //   console.log(`Search validation errors: ${validation.issues.join(", ")}`);
-  //   res.json([]);
-  //   return;
-  // }
   const searchPromises = [...new Set(trimmedSearchTerms)].map((skill) =>
     search.search(skill).then((resumeIDSet) => {
       if (resumeIDSet.status != -1) {
@@ -780,37 +809,6 @@ function generateReport(searchString, db, res) {
   );
   Promise.all(searchPromises).then(() => res.json(response));
 
-  // db.collection('resumes').countDocuments({}).then(resumeCount => {
-  //   response.employeeCount = resumeCount || 0;
-  //   if (!validation.good) {
-  //     console.log(`Search validation errors: ${validation.issues.join(", ")}`);
-  //     response.message = `Search validation errors: ${validation.issues.join(", ")}`;
-  //     response.error = true;
-  //     res.json(response);
-  //     return;
-  //   } else {
-  //     search.search(searchString).then(resumeIDSet => {
-  //       console.log(resumeIDSet);
-  //       if (resumeIDSet.status == -1) {
-  //         res.json(response);
-  //         return;
-  //       }
-  //       response.strictMatchCount = resumeIDSet.payload.size;
-  //       const searchTerms = searchString.toLowerCase().split(/[\|\*&!\(\)]+/).map(term => term.trim());
-  //       const trimmedSearchTerms = searchTerms.filter((term, index) => term || index == searchTerms.length - 1);
-  //       const looseSearchString = trimmedSearchTerms.join(" | ");
-  //       search.search(looseSearchString).then(looseResumeIDSet => {
-  //         console.log(looseResumeIDSet);
-  //         if (looseResumeIDSet.status == -1) {
-  //           res.json(response);
-  //           return;
-  //         }
-  //         response.looseMatchCount = looseResumeIDSet.payload.size;
-  //         res.json(response);
-  //       })
-  //     })
-  //   }
-  // })
 }
 
 // uploads a resume as a new document in the "resumes" collection in the database
@@ -848,7 +846,6 @@ function insertNewSkills(db, allCurrentKeys, skills_json) {
   console.log('inserting keys here');
   var newSkills = [];
   for (key in skills_json.skills) {
-    // console.log(skills_json.skills[key]);
     if (!allCurrentKeys.includes(skills_json.skills[key])) {
       newSkills.push({ name: skills_json.skills[key], resumes: [] });
     }
