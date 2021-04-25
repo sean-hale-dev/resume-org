@@ -96,6 +96,7 @@ class Database extends Component {
   };
 
   handleSearch(searchText) {
+    const {userID} = this.props;
     // const { searchText } = this.state;
     console.log(`Searching for ${searchText}`);
     this.setState({
@@ -106,6 +107,7 @@ class Database extends Component {
     axios
       .post(`http://${window.location.hostname}:8080/api/resume-search`, {
         queryString: searchText,
+        userID,
       })
       .then((res) => {
         this.setState({

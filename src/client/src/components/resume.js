@@ -104,6 +104,7 @@ class Resume extends Component {
   }
 
   uploadResume() {
+    const {userID} = this.props;
     if (this.state.resumeFile !== undefined) {
       console.log(
         'Upload Success- Will post the file: ',

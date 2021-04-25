@@ -38,6 +38,7 @@ class Reports extends Component {
   }
 
   handleSearch(searchText) {
+    const {userID} = this.props;
     console.log(`Searching for ${searchText}`);
     this.setState({
       openSnackBar: true,
@@ -47,6 +48,7 @@ class Reports extends Component {
     axios
       .post(`http://${window.location.hostname}:8080/api/resume-report`, {
         queryString: searchText,
+        userID,
       })
       .then((res) => {
         console.log(res);

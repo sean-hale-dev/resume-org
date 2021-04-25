@@ -40,6 +40,7 @@ mongo_client.connect(
     app.use(bodyParser.json({ limit: '10mb' }));
 
     app.post(endpointPrefix + '/resume-upload', (req, res) => {
+      // TODO: Protect with authorization
       var form = new formidable.IncomingForm();
       var userID;
       form.parse(req);
@@ -123,25 +124,40 @@ mongo_client.connect(
     });
 
     app.post(endpointPrefix + '/resume-search', (req, res) => {
-      console.log('Searching');
-      const queryString = req.body.queryString || '(c | !c)';
-      resumeSearch(queryString, db, res);
+      const { userID } = req.body;
+      hasServerPermission(userID, db, '/getProfile').then(authorized => {
+        if (authorized) {
+          console.log('Searching');
+          const queryString = req.body.queryString || '(c | !c)';
+          resumeSearch(queryString, db, res);
+        } else {
+          res.json({});
+        }
+      });
     });
 
     app.post(endpointPrefix + '/resume-report', (req, res) => {
-      console.log('Generating report');
-      const queryString = req.body.queryString || '(c | !c)';
-      generateReport(queryString, db, res);
+      const { userID } = req.body;
+      hasServerPermission(userID, db, '/resume-report').then(authorized => {
+        if (authorized) {
+          console.log('Generating report');
+          const queryString = req.body.queryString || '(c | !c)';
+          generateReport(queryString, db, res);
+        } else {
+          res.json({message: "Insufficient permissions", error: true});
+        }
+      });
     });
 
     // TEMP
-    app.get(endpointPrefix + '/resume-report', (req, res) => {
-      const queryString = 'javascript & c';
-      generateReport(queryString, db, res);
-    });
+    // app.get(endpointPrefix + '/resume-report', (req, res) => {
+    //   const queryString = 'javascript & c';
+    //   generateReport(queryString, db, res);
+    // });
 
     // lets the client download a resume from the database
     app.get(endpointPrefix + '/resume-download', (req, res) => {
+      // TODO: Protect with authorization
       // if searching by ObjectId
       if (req.query.id) {
         getResumeByID(db, mongo_client.ObjectId(req.query.id))
@@ -193,26 +209,58 @@ mongo_client.connect(
 
     app.post(endpointPrefix + '/getProfile', (req, res) => {
       const { userID } = req.body;
-      getProfile(userID, db, res);
+      hasServerPermission(userID, db, '/getProfile').then(authorized => {
+        if (authorized) {
+          getProfile(userID, db, res);
+        } else {
+          res.json({});
+        }
+      });
     });
 
     app.post(endpointPrefix + '/updateProfile', (req, res) => {
       const { userID, details } = req.body;
-      updateProfile(userID, details, db, res);
+      hasServerPermission(userID, db, '/updateProfile').then(authorized => {
+        if (authorized) {
+          updateProfile(userID, details, db, res);
+        } else {
+          res.json({});
+        }
+      });
     });
 
     app.post(endpointPrefix + '/getResumeSkills', (req, res) => {
       const { userID } = req.body;
-      getResumeSkillsByUserID(userID, db, res);
+      hasServerPermission(userID, db, '/getResumeSkills').then(authorized => {
+        if (authorized) {
+          getResumeSkillsByUserID(userID, db, res);
+        } else {
+          res.json([]);
+        }
+      });
     });
 
     app.post(endpointPrefix + '/updateResumeSkills', (req, res) => {
       const { userID, skills } = req.body;
-      updateResumeSkillsByUserID(userID, skills, db, res);
+      hasServerPermission(userID, db, '/updateResumeSkills').then(authorized => {
+        if (authorized) {
+          updateResumeSkillsByUserID(userID, skills, db, res);
+        } else {
+          res.json([]);
+        }
+      });
     });
 
-    app.get(endpointPrefix + '/getAllSearchableSkills', (req, res) => {
-      getAllSearchableSkills(db, res);
+    app.post(endpointPrefix + '/getAllSearchableSkills', (req, res) => {
+      const {userID} = req.body;
+      hasServerPermission(userID, db, '/getAllSearchableSkills').then(authorized => {
+        if (authorized) {
+          getAllSearchableSkills(db, res);
+        } else {
+          res.json([]);
+        }
+      });
+      
     });
 
     /**
@@ -220,7 +268,6 @@ mongo_client.connect(
      * @query userID Fully optional; userID to check
      */
     app.get('/getClientPermissions', (req, res) => {
-      console.log("Getting client permissions");
       const { userID } = req.query;
       hasServerPermission(userID, db, '/getClientPermissions').then(authorized => {
         if (authorized) {
