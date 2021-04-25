@@ -54,12 +54,12 @@ class Login extends Component {
   }
 
   render() {
-    const { userID, classes } = this.props;
+    const { userID, classes, clientPermissions } = this.props;
     const { userText, loggingIn } = this.state;
     return (
       <>
         {loggingIn && <Redirect to="/profile" />}
-        <Header selectedPage={userID ? 'Logout' : 'Login'} userID={userID} />
+        <Header selectedPage={userID ? 'Logout' : 'Login'} userID={userID}  clientPermissions={clientPermissions}/>
         <PageBody>
           <Typography variant="h5" align="center">
             WARNING: THIS IS A TEMPORARY LOGIN PAGE. PLEASE IMPLEMENT SECURE

@@ -91,6 +91,7 @@ class Database extends Component {
   };
 
   handleSearch(searchText) {
+    const {userID} = this.props;
     // const { searchText } = this.state;
     console.log(`Searching for ${searchText}`);
     this.setState({
@@ -101,6 +102,7 @@ class Database extends Component {
     axios
       .post(`http://${window.location.hostname}:8080/api/resume-search`, {
         queryString: searchText,
+        userID,
       })
       .then((res) => {
         this.setState({
@@ -140,7 +142,7 @@ class Database extends Component {
   handleSortSelect(selectedSort) {}
 
   render() {
-    const { classes, userID } = this.props;
+    const { classes, userID, clientPermissions } = this.props;
     const { searchResults } = this.state;
     const sortOptions = {
       '----': () => {
@@ -179,10 +181,11 @@ class Database extends Component {
 
     return (
       <>
-        <Header selectedPage="Resume Database" userID={userID} />
+        <Header selectedPage="Resume Database" userID={userID}  clientPermissions={clientPermissions}/>
         <PageBody>
           <Card>
             <SearchBar
+              userID={userID}
               searchLabelText="Search Resumes"
               searchButtonText="Search"
               handleSearch={(searchText) => this.handleSearch(searchText)}

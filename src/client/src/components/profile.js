@@ -117,13 +117,13 @@ class Profile extends Component {
   }
 
   render() {
-    const { userID, classes } = this.props;
+    const { userID, classes, clientPermissions } = this.props;
     const { originalProfileDetails, newProfileDetails, isEditing } = this.state;
     const hasProfileChanged = Object.keys(formFields).reduce(
       (accumulator, field) => {
-        console.log(
-          `Comparing ${originalProfileDetails[field]} to ${newProfileDetails[field]}`
-        );
+        // console.log(
+        //   `Comparing ${originalProfileDetails[field]} to ${newProfileDetails[field]}`
+        // );
         return (
           accumulator ||
           originalProfileDetails[field] !== newProfileDetails[field]
@@ -131,10 +131,10 @@ class Profile extends Component {
       },
       false
     );
-    console.log(`Has profile changed? ${hasProfileChanged}`);
+    // console.log(`Has profile changed? ${hasProfileChanged}`);
     return (
       <>
-        <Header selectedPage="Profile" userID={userID} />
+        <Header selectedPage="Profile" userID={userID} clientPermissions={clientPermissions} />
         <PageBody>
           <Card style={{ padding: '10px' }}>
             <Typography variant="h6" align="center">

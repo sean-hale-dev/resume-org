@@ -202,7 +202,7 @@ class Resume extends Component {
   }
 
   render() {
-    const { classes, userID } = this.props;
+    const { classes, userID, clientPermissions } = this.props;
     const { skills, editedSkills, isEditing } = this.state;
     // For comparing skills only
     const filteredSkillsSet = new Set(
@@ -225,7 +225,11 @@ class Resume extends Component {
     // console.log(editedSkills);
     return (
       <>
-        <Header selectedPage="Your Resume" userID={userID} />
+        <Header
+          selectedPage="Your Resume"
+          userID={userID}
+          clientPermissions={clientPermissions}
+        />
         <PageBody>
           {skills && skills.length > 0 && (
             <Card>

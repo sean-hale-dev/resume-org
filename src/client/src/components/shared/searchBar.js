@@ -81,18 +81,19 @@ class SearchBar extends Component {
   }
 
   componentDidMount() {
+    const {userID} = this.props;
     // TODO: Call server for this
     // const searchOptions = ["python", "angular", "react", "c", "d", "js", "mips assembly"];
     // this.setState({searchOptions}, this.updateSearchOptions);
     axios
-      .get(`http://${window.location.hostname}:8080/api/getAllSearchableSkills`)
+      .post(`http://${window.location.hostname}:8080/api/getAllSearchableSkills`, {userID})
       .then((res) => {
         if (res && Array.isArray(res.data)) {
           const skills = res.data;
           console.log(skills);
           this.setState(
             { searchOptions: Array.isArray(skills) ? skills.sort() : [] },
-            this.updateSearchOptions
+            () => this.updateSearchOptions()
           );
         }
       });

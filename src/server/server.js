@@ -11,6 +11,7 @@ const mongo_client = require('mongodb');
 // import search from './search.js';
 const search = require('./utils/search.js');
 const { strict } = require('assert');
+const { getClientPermissions, hasServerPermission, PERMISSION_LEVELS } = require('./utils/auth.js');
 
 const endpointPrefix = '/api';
 
@@ -39,6 +40,7 @@ mongo_client.connect(
     app.use(bodyParser.json({ limit: '10mb' }));
 
     app.post(endpointPrefix + '/resume-upload', (req, res) => {
+      // TODO: Protect with authorization
       var form = new formidable.IncomingForm();
       var userID;
       form.parse(req);
@@ -122,25 +124,34 @@ mongo_client.connect(
     });
 
     app.post(endpointPrefix + '/resume-search', (req, res) => {
-      console.log('Searching');
-      const queryString = req.body.queryString || '(c | !c)';
-      resumeSearch(queryString, db, res);
+      const { userID } = req.body;
+      hasServerPermission(userID, db, '/resume-search').then(authorized => {
+        if (authorized) {
+          console.log('Searching');
+          const queryString = req.body.queryString || '(c | !c)';
+          resumeSearch(queryString, db, res);
+        } else {
+          res.json([]);
+        }
+      });
     });
 
     app.post(endpointPrefix + '/resume-report', (req, res) => {
-      console.log('Generating report');
-      const queryString = req.body.queryString || '(c | !c)';
-      generateReport(queryString, db, res);
-    });
-
-    // TEMP
-    app.get(endpointPrefix + '/resume-report', (req, res) => {
-      const queryString = 'javascript & c';
-      generateReport(queryString, db, res);
+      const { userID } = req.body;
+      hasServerPermission(userID, db, '/resume-report').then(authorized => {
+        if (authorized) {
+          console.log('Generating report');
+          const queryString = req.body.queryString || '(c | !c)';
+          generateReport(queryString, db, res);
+        } else {
+          res.json({message: "Insufficient permissions", error: true});
+        }
+      });
     });
 
     // lets the client download a resume from the database
     app.get(endpointPrefix + '/resume-download', (req, res) => {
+      // TODO: Protect with authorization
       // if searching by ObjectId
       if (req.query.id) {
         getResumeByID(db, mongo_client.ObjectId(req.query.id))
@@ -192,26 +203,108 @@ mongo_client.connect(
 
     app.post(endpointPrefix + '/getProfile', (req, res) => {
       const { userID } = req.body;
-      getProfile(userID, db, res);
+      hasServerPermission(userID, db, '/getProfile').then(authorized => {
+        if (authorized) {
+          getProfile(userID, db, res);
+        } else {
+          res.json({});
+        }
+      });
     });
 
     app.post(endpointPrefix + '/updateProfile', (req, res) => {
       const { userID, details } = req.body;
-      updateProfile(userID, details, db, res);
+      hasServerPermission(userID, db, '/updateProfile').then(authorized => {
+        if (authorized) {
+          updateProfile(userID, details, db, res);
+        } else {
+          res.json({});
+        }
+      });
     });
 
     app.post(endpointPrefix + '/getResumeSkills', (req, res) => {
       const { userID } = req.body;
-      getResumeSkillsByUserID(userID, db, res);
+      hasServerPermission(userID, db, '/getResumeSkills').then(authorized => {
+        if (authorized) {
+          getResumeSkillsByUserID(userID, db, res);
+        } else {
+          res.json([]);
+        }
+      });
     });
 
     app.post(endpointPrefix + '/updateResumeSkills', (req, res) => {
       const { userID, skills } = req.body;
-      updateResumeSkillsByUserID(userID, skills, db, res);
+      hasServerPermission(userID, db, '/updateResumeSkills').then(authorized => {
+        if (authorized) {
+          updateResumeSkillsByUserID(userID, skills, db, res);
+        } else {
+          res.json([]);
+        }
+      });
     });
 
-    app.get(endpointPrefix + '/getAllSearchableSkills', (req, res) => {
-      getAllSearchableSkills(db, res);
+    app.post(endpointPrefix + '/getAllSearchableSkills', (req, res) => {
+      const {userID} = req.body;
+      hasServerPermission(userID, db, '/getAllSearchableSkills').then(authorized => {
+        if (authorized) {
+          getAllSearchableSkills(db, res);
+        } else {
+          res.json([]);
+        }
+      });
+      
+    });
+
+    /**
+     * Query items:
+     * @query userID Fully optional; userID to check
+     */
+    app.get('/getClientPermissions', (req, res) => {
+      const { userID } = req.query;
+      hasServerPermission(userID, db, '/getClientPermissions').then(authorized => {
+        if (authorized) {
+          getClientPermissions(userID, db).then(perms => res.json(perms));
+        } else {
+          res.json([]);
+        }
+      });
+    });
+
+    app.post('/adminGetProfiles', (req, res) => {
+      const { userID } = req.body;
+      console.log("Fetching all profiles");
+      hasServerPermission(userID, db, '/adminGetProfiles').then(authorized => {
+        if (authorized) {
+          console.log("Admin perms granted");
+          adminGetProfiles(db, res);
+        } else {
+          res.json([]);
+        }
+      });
+    });
+
+    app.post('/adminUpdateProfile', (req, res) => {
+      const { userID, targetUserID, updates } = req.body;
+      hasServerPermission(userID, db, '/adminUpdateProfile').then(authorized => {
+        if (authorized) {
+          adminUpdateProfile(db, res, targetUserID, updates);
+        } else {
+          res.json([]);
+        }
+      });
+    });
+
+    app.post('/adminDeleteProfile', (req, res) => {
+      const { userID, targetUserID } = req.body;
+      hasServerPermission(userID, db, '/adminDeleteProfile').then(authorized => {
+        if (authorized) {
+          adminDeleteProfile(db, res, targetUserID);
+        } else {
+          res.json([]);
+        }
+      });
     });
 
     app.listen(port, () => {
@@ -219,6 +312,101 @@ mongo_client.connect(
     });
   }
 );
+
+// Get list of all user profiles
+function adminGetProfiles(db, res) {
+  db.collection('employees').find({}).toArray((err, results) => {
+    // console.log(err);
+    // console.log(results);
+    if (err) {
+      res.json([]);
+    } else {
+      res.json(results);
+    }
+  })
+}
+
+/**
+ * Update an arbitrary user profile
+ * @param {mongo_client.Db} db 
+ * @param {*} res 
+ * @param {String} targetUserID 
+ * @param {Object} updates 
+ */
+function adminUpdateProfile(db, res, targetUserID, details) {
+  console.log(`Updating ${targetUserID} to ${JSON.stringify(details)}`);
+  targetUserID = `${targetUserID}`;
+  const updates = {};
+  if (details.name) updates.name = `${details.name}`;
+  if (details.yearsExperience) updates.yearsExperience = `${details.yearsExperience}`;
+  if (details.position) updates.position = `${details.position}`;
+  if (details.role && PERMISSION_LEVELS[details.role] !== undefined) updates.role = `${details.role}`;
+  // TODO: Add update user ID functionality
+  const updateDB = async () => {
+    if (Object.keys(updates).length) {
+      await db.collection('employees').updateOne(
+        { userID: targetUserID },
+        {
+          $set: updates,
+        }
+      )
+    }
+    if (details.userID) {
+      const newUserID = `${details.userID}`;
+      const resumeUpdatePromises = [];
+      resumeUpdatePromises.push(db.collection('employees').updateOne(
+        { userID: targetUserID },
+        {
+          $set: {userID: newUserID},
+        }
+      ));
+      resumeUpdatePromises.push(db.collection('resumes').updateOne(
+        { employee: targetUserID },
+        {
+          $set: {employee: newUserID},
+        }
+      ));
+      await Promise.all(resumeUpdatePromises);
+    }
+  }
+  updateDB().then(() => {
+    adminGetProfiles(db, res);
+  })
+}
+
+/**
+ * Delete an arbitrary user profile
+ * @param {mongo_client.Db} db 
+ * @param {*} res 
+ * @param {String} targetUserID 
+ */
+function adminDeleteProfile(db, res, targetUserID) {
+  console.log(`Attempting to delete ${targetUserID}`);
+  db.collection('resumes').findOne({employee: targetUserID}).then(resume => {
+    console.log("Resume to delete:");
+    console.log(resume);
+    const employeeDeletionPromises = [];
+    if (resume && Array.isArray(resume.skills)) {
+      console.log(`Removing employee ${resume.employee}'s resume from skills: ${resume.skills.join(", ")}`)
+      employeeDeletionPromises.push(
+        db.collection('skill_assoc').updateMany(
+          {name: {$in: resume.skills}},
+          {$pull: {resumes: resume._id}}
+        )
+      );
+    }
+    if (resume) {
+      console.log(`Removing employee ${resume.employee}'s resume`);
+      employeeDeletionPromises.push(db.collection('resumes').deleteOne({_id: resume._id}));
+    }
+    employeeDeletionPromises.push(
+      db.collection('employees').deleteOne({userID: targetUserID})
+    );
+    Promise.all(employeeDeletionPromises).then(() => {
+      adminGetProfiles(db, res);
+    })
+  })
+}
 
 // Get list of all skills for searching
 function getAllSearchableSkills(db, res) {
