@@ -54,19 +54,30 @@ const styles = (theme) => ({
   },
 });
 
+/**
+ * Compare two strings
+ * @param {String} a 
+ * @param {String} b 
+ * @returns 1 if a > b, -1 if a < 0, 0 if a == b
+ */
 const stringCompare = (a, b) => {
   if (a < b) return -1;
   if (a > b) return 1;
   return 0;
 };
 
+/**
+ * Props:
+ * @param {String} userID userID string
+ * @param {Object} clientPermissions Object containing list of links that client has access to
+ * @param {*} location React Router location
+ * @param {*} history "history" library object
+ */
 class Database extends Component {
   constructor(props) {
     super(props);
-    // TODO: Implement Search Function
     this.state = {
       searchResults: [],
-      // searchText: "",
       openSnackBar: false,
       typeSnackBar: '',
       snackBarText: '',
@@ -76,6 +87,10 @@ class Database extends Component {
     this.handleSearch.bind(this);
   }
 
+  /**
+   * View an employee's resume
+   * @param {String} employeeID 
+   */
   openResumeDialog = (employeeID) => {
     this.setState({
       resumeDialogOpen: true,
@@ -83,6 +98,9 @@ class Database extends Component {
     });
   };
 
+  /**
+   * Stop viewing a resume
+   */
   closeResumeDialog = () => {
     this.setState({
       resumeDialogOpen: false,
@@ -90,9 +108,12 @@ class Database extends Component {
     });
   };
 
+  /**
+   * Search for a string!
+   * @param {String} searchText 
+   */
   handleSearch(searchText) {
     const {userID} = this.props;
-    // const { searchText } = this.state;
     console.log(`Searching for ${searchText}`);
     this.setState({
       openSnackBar: true,
@@ -139,10 +160,8 @@ class Database extends Component {
     this.setState({ openSnackBar: false });
   };
 
-  handleSortSelect(selectedSort) {}
-
   render() {
-    const { classes, userID, clientPermissions } = this.props;
+    const { classes, userID, clientPermissions, location, history } = this.props;
     const { searchResults } = this.state;
     const sortOptions = {
       '----': () => {
@@ -189,6 +208,8 @@ class Database extends Component {
               searchLabelText="Search Resumes"
               searchButtonText="Search"
               handleSearch={(searchText) => this.handleSearch(searchText)}
+              location={location}
+              history={history}
             />
           </Card>
           <Card className={classes.resultsCard}>
@@ -241,21 +262,6 @@ class Database extends Component {
                           View Resume
                           <ArrowForwardIcon />
                         </Button>
-                        {
-                          // <Link
-                          //   href={
-                          //     result.employeeID
-                          //       ? `http://${window.location.hostname}:8080/api/resume-download?employee=${result.employeeID}`
-                          //       : ''
-                          //   }
-                          //   color="inherit"
-                          // >
-                          //   <Button disabled={!result.employeeID}>
-                          //     View Resume
-                          //     <ArrowForwardIcon />
-                          //   </Button>
-                          // </Link>
-                        }
                       </Toolbar>
                     </Grid>
                   </Grid>

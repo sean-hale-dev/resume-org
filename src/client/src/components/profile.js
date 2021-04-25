@@ -30,6 +30,11 @@ const formFields = {
   yearsExperience: { text: 'Years of Experience', type: 'number' },
 };
 
+/**
+ * Props:
+ * @param {String} userID userID string
+ * @param {Object} clientPermissions Object containing list of links that client has access to
+ */
 class Profile extends Component {
   constructor(props) {
     super(props);
@@ -39,19 +44,6 @@ class Profile extends Component {
       isEditing: false,
     };
   }
-
-  // handleLogin() {
-  //   const {userText} = this.state;
-  //   const {cookies} = this.props;
-  //   cookies.set("userID", userText);
-  //   this.setState({userText: ""});
-  // }
-
-  // handleLogout() {
-  //   const {cookies} = this.props;
-  //   cookies.set("userID", "");
-  //   this.setState({userText: ""});
-  // }
 
   componentDidMount() {
     const { userID } = this.props;
@@ -76,17 +68,27 @@ class Profile extends Component {
       });
   }
 
+  /**
+   * Update a profile field
+   * @param {String} field 
+   * @param {String} value 
+   */
   onFormFieldChange(field, value) {
     const { newProfileDetails } = this.state;
     newProfileDetails[field] = value;
-    console.log(`New details: ${JSON.stringify(newProfileDetails)}`);
     this.setState({ newProfileDetails });
   }
 
+  /**
+   * Start editing the profile
+   */
   startEditing() {
     this.setState({ isEditing: true });
   }
 
+  /**
+   * Cancel editing the profile
+   */
   cancelEditing() {
     const { originalProfileDetails } = this.state;
     this.setState({
@@ -99,6 +101,9 @@ class Profile extends Component {
     });
   }
 
+  /**
+   * Save edits to the profile and stop editing
+   */
   saveEdits() {
     const { userID } = this.props;
     const { newProfileDetails } = this.state;
@@ -121,9 +126,6 @@ class Profile extends Component {
     const { originalProfileDetails, newProfileDetails, isEditing } = this.state;
     const hasProfileChanged = Object.keys(formFields).reduce(
       (accumulator, field) => {
-        // console.log(
-        //   `Comparing ${originalProfileDetails[field]} to ${newProfileDetails[field]}`
-        // );
         return (
           accumulator ||
           originalProfileDetails[field] !== newProfileDetails[field]
@@ -131,7 +133,6 @@ class Profile extends Component {
       },
       false
     );
-    // console.log(`Has profile changed? ${hasProfileChanged}`);
     return (
       <>
         <Header selectedPage="Profile" userID={userID} clientPermissions={clientPermissions} />
@@ -204,38 +205,6 @@ class Profile extends Component {
               )}
             </Toolbar>
           </Card>
-          {/* <Typography variant="h5" align="center">WARNING: THIS IS A TEMPORARY LOGIN PAGE. PLEASE IMPLEMENT SECURE USER MANAGEMENT SYSTEM.</Typography>
-        {userID ? 
-          <>
-            <Card>
-              <Toolbar className={classes.loginToolbar}>
-                <Grid container justify="space-between" alignItems="center">
-                  <Typography>Currently logged in as {userID}.</Typography>
-                  <Button variant="contained" color="primary" onClick={() => {this.handleLogout()}}>Logout</Button>
-                </Grid>
-              </Toolbar>
-            </Card>
-          </>
-          :
-          <>
-            <Card>
-              <Toolbar className={classes.loginToolbar}>
-                <Grid container justify="space-between" alignItems="center">
-                  <TextField
-                    label="Username"
-                    variant="outlined"
-                    value={userText}
-                    className={classes.loginField}
-                    onChange={event => {this.setState({userText: event.target.value})}}
-                  />
-                  <Button variant="contained" color="primary" onClick={() => {this.handleLogin()}}>
-                    Login
-                  </Button>
-                </Grid>
-              </Toolbar>
-            </Card>
-          </>
-        } */}
         </PageBody>
       </>
     );

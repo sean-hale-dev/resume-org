@@ -1,19 +1,8 @@
 import React, { Component } from 'react';
 import Header from './shared/header.js';
 import PageBody from './shared/pagebody.js';
-import {
-  Button,
-  Card,
-  Typography,
-  TextField,
-  Toolbar,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-} from '@material-ui/core';
-import { withStyles } from '@material-ui/core/styles';
+import { Button, Card, Typography, TextField, Toolbar, Grid, FormControl, InputLabel, Select, MenuItem } from '@material-ui/core';
+import { withStyles } from '@material-ui/core/styles'
 import axios from 'axios';
 import EditIcon from '@material-ui/icons/Edit';
 import CancelIcon from '@material-ui/icons/Cancel';
@@ -70,6 +59,11 @@ const PERMISSION_LEVELS = {
   Admin: 3,
 };
 
+/**
+ * Copy a user object.
+ * @param {Object} user 
+ * @returns A shallow copy of the provided user
+ */
 function copyUser(user) {
   const copy = {};
   Object.entries(user).forEach(([field, value]) => {
@@ -78,12 +72,23 @@ function copyUser(user) {
   return copy;
 }
 
+/**
+ * Compare two strings
+ * @param {String} a 
+ * @param {String} b 
+ * @returns 1 if a > b, -1 if a < 0, 0 if a == b
+ */
 const stringCompare = (a, b) => {
   if (a < b) return -1;
   if (a > b) return 1;
   return 0;
 };
 
+/**
+ * Check whether a user has been edited
+ * @param {String} user 
+ * @returns Boolean of whether the user has been edited.
+ */
 function hasUserDataChanged(user) {
   const { userData, editedUserData } = user;
   return Object.keys(USER_FIELDS).reduce(
@@ -93,6 +98,11 @@ function hasUserDataChanged(user) {
   );
 }
 
+/**
+ * Props:
+ * @param {String} userID userID string
+ * @param {Object} clientPermissions Object containing list of links that client has access to
+ */
 class Admin extends Component {
   constructor(props) {
     super(props);
@@ -108,31 +118,31 @@ class Admin extends Component {
   }
 
   componentDidMount() {
-    const { userID } = this.props;
-    console.log('Component mounted');
-    axios
-      .post(`http://${window.location.hostname}:8080/adminGetProfiles`, {
-        userID,
-      })
-      .then((res) => {
-        console.log(res);
-        this.setState({
-          users: res.data.map((user, index) => ({
-            index,
-            editing: false,
-            userData: copyUser(user),
-            editedUserData: copyUser(user),
-          })),
-        });
-      });
+    const {userID} = this.props;
+    axios.post(`http://${window.location.hostname}:8080/adminGetProfiles`, {userID}).then(res => {
+      this.setState({users: res.data.map((user, index) => ({
+        index,
+        editing: false,
+        userData: copyUser(user),
+        editedUserData: copyUser(user),
+      }))});
+    })
   }
 
+  /**
+   * Start editing a user
+   * @param {String} user 
+   */
   startEditing(user) {
     const { users } = this.state;
     user.isEditing = true;
     this.setState({ users });
   }
 
+  /**
+   * Stop editing a user
+   * @param {String} user 
+   */
   cancelEditing(user) {
     const { users } = this.state;
     user.isEditing = false;
@@ -140,6 +150,10 @@ class Admin extends Component {
     this.setState({ users });
   }
 
+  /**
+   * Save edits to a user and stop editing
+   * @param {String} user 
+   */
   saveEdits(user) {
     const { userID, cookies } = this.props;
     const { users } = this.state;
@@ -188,6 +202,11 @@ class Admin extends Component {
     }
   }
 
+  /**
+   * Delete a user from the site!
+   * @param {String} user 
+   * @param {number} index Index of user in 'users' array
+   */
   deleteUser(user, index) {
     const { userID } = this.props;
     const { users } = this.state;
@@ -205,16 +224,28 @@ class Admin extends Component {
     );
   }
 
+  /**
+   * Open a dialog letting users opt out of a risky action if they wish to cancel
+   * @param {String} warningTitle 
+   * @param {String} warningText 
+   * @param {Function} acceptFunction Function that runs on accepting the warning
+   */
   openWarningDialog(warningTitle, warningText, acceptFunction) {
     this.setState({
       warning: { warningTitle, warningText, acceptFunction },
     });
   }
 
+  /**
+   * Close warning dialog
+   */
   cancelWarningDialog() {
     this.setState({ warning: false });
   }
 
+  /**
+   * Accept the warning dialog and run the associated function
+   */
   acceptWarningDialog() {
     const { warning } = this.state;
     if (warning && warning.acceptFunction) warning.acceptFunction();
@@ -226,6 +257,7 @@ class Admin extends Component {
     const { users, warning } = this.state;
     console.log(users);
 
+    // Sorting functions
     const sortOptions = {
       '----': () => {
         users.sort((a, b) => a.index - b.index);
@@ -339,145 +371,76 @@ class Admin extends Component {
                 </FormControl>
               </Grid>
             </Grid>
-            {users.map((user, rawIndex) => (
-              <Card style={{ padding: '10px' }}>
-                <Grid container alignItems="center">
-                  <Grid item xs={6}>
-                    {Object.entries(USER_FIELDS).map(([field, value]) => (
-                      <Toolbar style={{ padding: '0px', minHeight: '0px' }}>
-                        {user.isEditing &&
-                        !(
-                          field === 'role' && user.userData.userID === userID
-                        ) ? (
-                          {
-                            text: (
-                              <TextField
-                                label={value}
-                                variant="outlined"
-                                type={'text'}
-                                value={user.editedUserData[field]}
-                                InputLabelProps={{
-                                  shrink: user.editedUserData[field]
-                                    ? true
-                                    : false,
-                                }}
-                                className={classes.profileField}
-                                onChange={(event) => {
-                                  // this.onFormFieldChange(field, event.target.value)
-                                  user.editedUserData[field] =
-                                    event.target.value;
-                                  this.setState({ users });
-                                }}
-                              />
-                            ),
-                            number: (
-                              <TextField
-                                label={value}
-                                variant="outlined"
-                                type={'number'}
-                                value={user.editedUserData[field]}
-                                InputLabelProps={{
-                                  shrink: user.editedUserData[field]
-                                    ? true
-                                    : false,
-                                }}
-                                className={classes.profileField}
-                                onChange={(event) => {
-                                  // this.onFormFieldChange(field, event.target.value)
-                                  user.editedUserData[field] =
-                                    event.target.value;
-                                  this.setState({ users });
-                                }}
-                              />
-                            ),
-                            role: (
-                              <FormControl className={classes.resultsSortBy}>
-                                <InputLabel id="results-sort-label">
-                                  Role
-                                </InputLabel>
-                                <Select
-                                  value={user.editedUserData[field]}
-                                  labelId="results-sort-label"
-                                  id="results-sort"
-                                  onChange={(event) => {
-                                    // sortOptions[event.target.value]()
-                                    user.editedUserData[field] =
-                                      event.target.value;
-                                    this.setState({ users });
-                                  }}
-                                >
-                                  {Object.keys(PERMISSION_LEVELS).map(
-                                    (permissionLevel) => (
-                                      <MenuItem value={permissionLevel}>
-                                        {permissionLevel}
-                                      </MenuItem>
-                                    )
-                                  )}
-                                </Select>
-                              </FormControl>
-                            ),
-                          }[USER_FIELD_EDIT_STYLES[field]]
-                        ) : (
-                          <Typography>
-                            {value}: {user.userData[field] || ''}
-                          </Typography>
-                        )}
-                      </Toolbar>
-                    ))}
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Toolbar
-                      style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}
-                    >
-                      {user.isEditing ? (
-                        <>
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            style={{ margin: '5px' }}
-                            onClick={() => {
-                              this.cancelEditing(user);
+          </Grid>
+          {users.map((user, rawIndex) => 
+            <Card style={{padding: "10px"}}>
+              <Grid container alignItems="center">
+                <Grid item xs={6}>
+                  {Object.entries(USER_FIELDS).map(([field, value]) => 
+                    <Toolbar style={{padding: "0px", minHeight: "0px"}}>
+                      {user.isEditing && !(field == "role" && user.userData.userID == userID) ? 
+                        {
+                          "text": <TextField
+                            label={value}
+                            variant="outlined"
+                            type={"text"}
+                            value={user.editedUserData[field]}
+                            InputLabelProps={{shrink: (user.editedUserData[field] ? true : false)}}
+                            className={classes.profileField}
+                            onChange={event => {
+                              user.editedUserData[field] = event.target.value;
+                              this.setState({users});
                             }}
-                          >
-                            Cancel <CancelIcon style={{ marginLeft: '10px' }} />
-                          </Button>
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            style={{ margin: '5px' }}
-                            disabled={!hasUserDataChanged(user)}
-                            onClick={() => {
-                              this.saveEdits(user);
+                          />,
+                          "number": <TextField
+                            label={value}
+                            variant="outlined"
+                            type={"number"}
+                            value={user.editedUserData[field]}
+                            InputLabelProps={{shrink: (user.editedUserData[field] ? true : false)}}
+                            className={classes.profileField}
+                            onChange={event => {
+                              user.editedUserData[field] = event.target.value;
+                              this.setState({users});
                             }}
-                          >
-                            Save <SaveIcon style={{ marginLeft: '10px' }} />
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            style={{ margin: '5px' }}
-                            onClick={() => {
-                              this.startEditing(user);
-                            }}
-                          >
-                            Edit <EditIcon style={{ marginLeft: '10px' }} />
-                          </Button>
-                        </>
-                      )}
-                      {user.userData.userID !== userID && (
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          style={{ margin: '5px' }}
-                          onClick={() => {
-                            this.deleteUser(user, rawIndex);
-                          }}
-                        >
-                          Delete{' '}
-                          <DeleteForeverIcon style={{ marginLeft: '10px' }} />
+                          />,
+                          "role": <FormControl className={classes.resultsSortBy}>
+                            <InputLabel id="results-sort-label">Role</InputLabel>
+                            <Select 
+                              value={user.editedUserData[field]}
+                              labelId="results-sort-label" 
+                              id="results-sort" 
+                              onChange={event => {
+                                user.editedUserData[field] = event.target.value;
+                                this.setState({users});
+                              }}
+                            >
+                              {Object.keys(PERMISSION_LEVELS).map(permissionLevel => <MenuItem value={permissionLevel}>{permissionLevel}</MenuItem>)}
+                            </Select>
+                          </FormControl>,
+                        }[USER_FIELD_EDIT_STYLES[field]]
+                      : 
+                        <Typography>{value}: {user.userData[field] || ""}</Typography>
+                      }
+                    </Toolbar>
+                  )}
+                </Grid>
+                <Grid item xs={6}>
+                  <Toolbar style={{justifyContent: "flex-end", flexWrap: "wrap"}}>
+                    {user.isEditing ? 
+                      <>
+                        <Button variant="contained" color="primary" style={{margin: "5px"}} onClick={() => {this.cancelEditing(user)}}>
+                          Cancel <CancelIcon style={{marginLeft: "10px"}}/>
+                        </Button>
+                        <Button variant="contained" color="primary" style={{margin: "5px"}} disabled={!hasUserDataChanged(user)} onClick={() => {this.saveEdits(user)}}>
+                          Save <SaveIcon style={{marginLeft: "10px"}}/>
+                        </Button>
+                      </> 
+                    : 
+                      <>
+                        <Button variant="contained" color="primary" style={{margin: "5px"}} onClick={() => {this.startEditing(user)}}>
+                          Edit <EditIcon style={{marginLeft: "10px"}}/>
+
                         </Button>
                       )}
                     </Toolbar>

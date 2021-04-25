@@ -33,6 +33,8 @@ const PAGES = [
 /**
  * Props:
  * @param {String} selectedPage Currently active page. Used as title.
+ * @param {String} userID User ID
+ * @param {Object} clientPermissions Object containing list of links that client has access to
  */
 class Header extends Component {
   constructor(props) {
@@ -42,6 +44,12 @@ class Header extends Component {
     };
   }
 
+  /**
+   * Function constructor to toggle the drawer.
+   * @param {boolean} open Optional. If undefined, creates a function that toggles the drawer. If defined, creates a function that
+   * sets the open property to its definition.
+   * @returns Function that toggles/opens/closes the drawer: format toggle(event)
+   */
   toggleDrawer(open = undefined) {
     return (event) => {
       if (

@@ -9,7 +9,6 @@ import Autocomplete from '@material-ui/lab/Autocomplete';
 const styles = (theme) => ({
   searchField: {
     width: '70%',
-    // margin: "0 20px",
   },
   searchToolbar: {
     gap: '20px',
@@ -39,7 +38,11 @@ const styles = (theme) => ({
   },
 });
 
-// Validate search query
+/**
+ * Validate search query parentheses
+ * @param {String} queryString 
+ * @returns Whether the query string has matching parentheses
+ */
 function validateSearchQueryParentheses(queryString) {
   if (typeof queryString !== 'string') {
     return false;
@@ -54,13 +57,22 @@ function validateSearchQueryParentheses(queryString) {
   return parenthesisTracker === 0;
 }
 
+/**
+ * Validate that the string has no macros
+ * @param {String} queryString 
+ * @returns Whether the string has any problematic search macros
+ */
 function validateSearchQueryMacros(queryString) {
   const regExpMacro = /\$\d*\$/;
   const queryStringMacros = queryString.match(regExpMacro);
-  // console.log(queryStringMacros);
   return !queryStringMacros || queryStringMacros.length === 0;
 }
 
+/**
+ * Validate a query string
+ * @param {String} queryString 
+ * @returns Object{good: boolean, issues: Array} Whether the string is good, and any errors if present
+ */
 function validateSearchQuery(queryString) {
   const parenthesesGood = validateSearchQueryParentheses(queryString);
   const macrosGood = validateSearchQueryMacros(queryString);
@@ -70,21 +82,32 @@ function validateSearchQuery(queryString) {
   return { good: issues.length === 0, issues };
 }
 
+/**
+ * Props:
+ * @param {*} location React Router location
+ * @param {String} userID userID string
+ * @param {*} history "history" library object
+ * @param {*} handleSearch Function called on search. Must accept searchText string param
+ * @param {String} searchButtonText
+ * @param {String} searchLabelText
+ */
 class SearchBar extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      searchText: '',
+      searchText: (new URLSearchParams(props.location.search)).get("searchText") || "",
       searchOptions: [],
       activeOptions: [],
     };
   }
 
   componentDidMount() {
-    const {userID} = this.props;
-    // TODO: Call server for this
-    // const searchOptions = ["python", "angular", "react", "c", "d", "js", "mips assembly"];
-    // this.setState({searchOptions}, this.updateSearchOptions);
+    const {userID, location} = this.props;
+    const {searchText} = this.state;
+    const { good, issues } = validateSearchQuery(searchText);
+    if (good && (new URLSearchParams(location.search)).get("autoSearch") && searchText) {
+      this.handleSearch();
+    }
     axios
       .post(`http://${window.location.hostname}:8080/api/getAllSearchableSkills`, {userID})
       .then((res) => {
@@ -99,6 +122,11 @@ class SearchBar extends Component {
       });
   }
 
+  /**
+   * Get the last term in a search string
+   * @param {String} searchText 
+   * @returns Lowercase last term in a search string
+   */
   getLastTerm(searchText) {
     // Split string on "|", "&", "!", "*", "(", and ")"; then remove leading/trailing whitespace and remove empty terms
     const searchTerms = searchText
@@ -108,7 +136,6 @@ class SearchBar extends Component {
     const trimmedSearchTerms = searchTerms.filter(
       (term, index) => term || index === searchTerms.length - 1
     );
-    // console.log(trimmedSearchTerms);
     const lastTerm =
       trimmedSearchTerms.length > 0
         ? trimmedSearchTerms[trimmedSearchTerms.length - 1]
@@ -116,9 +143,11 @@ class SearchBar extends Component {
     return lastTerm;
   }
 
+  /**
+   * Update active search options to match new search text.
+   */
   updateSearchOptions() {
     const { searchText, searchOptions } = this.state;
-    // console.log(`searchText: ${searchText}`);
     const lastTerm = this.getLastTerm(searchText);
     const MAX_TERMS_TO_RENDER = 1000;
     const activeOptions = searchOptions
@@ -131,20 +160,42 @@ class SearchBar extends Component {
     this.setState({ activeOptions });
   }
 
+  /**
+   * Update the appropriate values upon getting new search text.
+   * @param {String} searchText 
+   */
+  setSearchText(searchText) {
+    const {location, history} = this.props;
+    console.log(`Setting search text to ${searchText}`);
+    this.setState({searchText}, () => {
+      const search = (new URLSearchParams(location.search));
+      search.set("searchText", searchText);
+      history.replace({search: search.toString()});
+      this.updateSearchOptions();
+    })
+  }
+
+  /**
+   * Call the "handleSearch" prop function 
+   */
   handleSearch() {
     const { handleSearch } = this.props;
     const { searchText } = this.state;
     handleSearch(searchText);
   }
 
+  /**
+   * Handle autocomplete select
+   * @param {*} event 
+   * @param {*} newValue 
+   * @param {*} reason 
+   */
   onSearchChange(event, newValue, reason) {
-    // console.log(`Change ${reason}; newVal ${newValue}`);
     if (reason === 'select-option') {
       // Handle yet another odd edge case caused by poor autocomplete behavior
       if (newValue === undefined) {
         const { searchText } = this.state;
-        // console.log(`Undefined detected; searchText: ${searchText}`);
-        this.setState({ searchText: '' }, () => this.setState({ searchText }));
+        this.setState({ searchText: '' }, () => this.setSearchText(searchText));
         return;
       }
       // Cut last search term and replace
@@ -152,33 +203,32 @@ class SearchBar extends Component {
       const lastTerm = this.getLastTerm(searchText);
       if (!lastTerm || searchText.toLowerCase().lastIndexOf(lastTerm) == -1) {
         // Handle select from empty string
-        this.setState(
-          { searchText: searchText + newValue },
-          this.updateSearchOptions
-        );
+        this.setSearchText(searchText + newValue);
       } else {
         const otherText = searchText.substring(0, searchText.toLowerCase().lastIndexOf(lastTerm));
         // The multiple setState calls are necessary to deal with a buggy Autocomplete edge case where selecting an option but not updating
         // state causes the option to fill the text field rather than the correct controlled value.
         this.setState({ searchText: otherText }, () =>
-          this.setState(
-            { searchText: otherText + newValue },
-            this.updateSearchOptions
-          )
+          this.setSearchText(otherText + newValue)
         );
       }
     }
   }
 
+  /**
+   * Handle typed input
+   * @param {*} event 
+   * @param {*} newValue 
+   * @param {*} reason 
+   */
   onSearchInputChange(event, newValue, reason) {
-    // console.log(`Change ${reason}; newVal ${newValue}`);
-    if (reason === 'input')
-      this.setState({ searchText: newValue }, this.updateSearchOptions);
+    if (reason === 'input') {
+      this.setSearchText(newValue);
+    }
   }
 
   render() {
     const { searchText, activeOptions } = this.state;
-    // console.log(`Render searchText: ${searchText}`);
     const { classes, searchLabelText, searchButtonText } = this.props;
     const { good, issues } = validateSearchQuery(searchText);
 
