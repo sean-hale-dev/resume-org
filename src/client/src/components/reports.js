@@ -1,27 +1,9 @@
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Button,
-  Card,
-  FormControl,
-  Grid,
-  InputLabel,
-  MenuItem,
-  Select,
-  TextField,
-  Toolbar,
-  Typography,
-  Snackbar,
-  Grow,
-} from '@material-ui/core';
+import { Card, Toolbar, Typography, Snackbar, Grow } from '@material-ui/core';
 import React, { Component } from 'react';
 import Header from './shared/header.js';
-import SearchIcon from '@material-ui/icons/Search';
-import ArrowForwardIcon from '@material-ui/icons/ArrowForward';
 import PageBody from './shared/pagebody.js';
 import { withStyles } from '@material-ui/core/styles';
-import { grey, red } from '@material-ui/core/colors';
+import { red } from '@material-ui/core/colors';
 import SearchBar from './shared/searchBar.js';
 import axios from 'axios';
 import MuiAlert from '@material-ui/lab/Alert';
@@ -87,7 +69,7 @@ class Reports extends Component {
   }
 
   handleSnackbarClose = (event, reason) => {
-    if (reason == 'clickaway') return;
+    if (reason === 'clickaway') return;
     this.setState({ openSnackBar: false });
   };
 
@@ -121,15 +103,15 @@ class Reports extends Component {
                 ) : (
                   <>
                     <Typography>
-                      There {result.employeeCount == 1 ? 'is' : 'are'}{' '}
+                      There {result.employeeCount === 1 ? 'is' : 'are'}{' '}
                       {result.employeeCount} employee
-                      {result.employeeCount == 1 ? '' : 's'} in the
+                      {result.employeeCount === 1 ? '' : 's'} in the
                       organization.{' '}
-                      {result.employeeCount == 1 ? '' : 'Of those:'}
+                      {result.employeeCount === 1 ? '' : 'Of those:'}
                     </Typography>
                     <Typography>
                       {result.strictMatchCount} strictly match
-                      {result.strictMatchCount == 1 ? 'es' : ''} the query (
+                      {result.strictMatchCount === 1 ? 'es' : ''} the query (
                       {(
                         (100.0 * result.strictMatchCount) /
                         result.employeeCount
@@ -138,7 +120,7 @@ class Reports extends Component {
                     </Typography>
                     <Typography>
                       {result.looseMatchCount}{' '}
-                      {result.looseMatchCount == 1 ? 'has' : 'have'} at least
+                      {result.looseMatchCount === 1 ? 'has' : 'have'} at least
                       one skill in the query (
                       {(
                         (100.0 * result.looseMatchCount) /
@@ -149,7 +131,7 @@ class Reports extends Component {
                     {Object.entries(result.individualSkillMatches).map(
                       ([skill, count]) => (
                         <Typography>
-                          {count} {count == 1 ? 'has' : 'have'} the skill "
+                          {count} {count === 1 ? 'has' : 'have'} the skill "
                           {skill}" (
                           {((100.0 * count) / result.employeeCount).toFixed(2)}%
                           of the organization).
@@ -162,10 +144,10 @@ class Reports extends Component {
             </Card>
           )}
         </PageBody>
-        <Grow in={this.state.openSnackBar == true}>
+        <Grow in={this.state.openSnackBar === true}>
           <Snackbar
             anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-            open={this.state.openSnackBar == true}
+            open={this.state.openSnackBar === true}
             onClose={this.handleSnackbarClose}
           >
             <MuiAlert
@@ -173,11 +155,11 @@ class Reports extends Component {
               variant="filled"
               onClose={this.handleSnackbarClose}
               severity={
-                this.state.typeSnackBar == 'generating'
+                this.state.typeSnackBar === 'generating'
                   ? 'info'
-                  : this.state.typeSnackBar == 'error'
+                  : this.state.typeSnackBar === 'error'
                   ? 'error'
-                  : this.state.typeSnackBar == 'success'
+                  : this.state.typeSnackBar === 'success'
                   ? 'success'
                   : ''
               }
@@ -192,4 +174,3 @@ class Reports extends Component {
 }
 
 export default withStyles(styles)(Reports);
-

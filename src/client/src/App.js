@@ -1,4 +1,3 @@
-import logo from './logo.svg';
 import './App.css';
 import { ThemeProvider } from '@material-ui/core';
 import resume_org_theme from './components/shared/resume-org-theme';
@@ -6,18 +5,15 @@ import {
   BrowserRouter as Router,
   Switch,
   Route,
-  Link,
   Redirect,
 } from 'react-router-dom';
-import Header from './components/shared/header';
-import Home from './components/homepage';
 import Resume from './components/resume';
 import Database from './components/database';
 import Reports from './components/reports';
 import Login from './components/login';
 import Profile from './components/profile';
 
-import { withCookies, Cookies } from 'react-cookie';
+import { withCookies } from 'react-cookie';
 
 function App(props) {
   const { cookies } = props;

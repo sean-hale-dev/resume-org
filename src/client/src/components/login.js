@@ -3,7 +3,6 @@ import Header from './shared/header.js';
 import PageBody from './shared/pagebody.js';
 import {
   Button,
-  IconButton,
   Card,
   Typography,
   TextField,
@@ -11,15 +10,8 @@ import {
   Grid,
 } from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles';
-import { withCookies, Cookies } from 'react-cookie';
 import axios from 'axios';
-import {
-  BrowserRouter as Router,
-  Switch,
-  Route,
-  Link,
-  Redirect,
-} from 'react-router-dom';
+import { Redirect } from 'react-router-dom';
 
 const styles = (theme) => ({
   loginField: {
@@ -62,7 +54,7 @@ class Login extends Component {
   }
 
   render() {
-    const { userID, classes, cookies } = this.props;
+    const { userID, classes } = this.props;
     const { userText, loggingIn } = this.state;
     return (
       <>

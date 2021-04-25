@@ -1,30 +1,22 @@
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Box,
   Button,
   Card,
   Dialog,
   DialogContent,
-  DialogTitle,
-  Slide,
   FormControl,
   Grid,
   IconButton,
   InputLabel,
   MenuItem,
   Select,
-  TextField,
   Toolbar,
   Typography,
-  Link,
   Snackbar,
   Grow,
 } from '@material-ui/core';
 import React, { Component } from 'react';
 import Header from './shared/header.js';
-import SearchIcon from '@material-ui/icons/Search';
 import CloseIcon from '@material-ui/icons/Close';
 import ArrowForwardIcon from '@material-ui/icons/ArrowForward';
 import PageBody from './shared/pagebody.js';
@@ -128,7 +120,7 @@ class Database extends Component {
             employeeID: data.employeeID || '',
           })),
           openSnackBar: true,
-          typeSnackBar: res.data.status == 0 ? 'success' : 'error',
+          typeSnackBar: res.data.status === 0 ? 'success' : 'error',
           snackBarText: res.data.message,
         });
       })
@@ -148,7 +140,7 @@ class Database extends Component {
   }
 
   handleSnackbarClose = (event, reason) => {
-    if (reason == 'clickaway') return;
+    if (reason === 'clickaway') return;
     this.setState({ openSnackBar: false });
   };
 
@@ -156,7 +148,7 @@ class Database extends Component {
 
   render() {
     const { classes, userID } = this.props;
-    const { searchResults, searchText } = this.state;
+    const { searchResults } = this.state;
     const sortOptions = {
       '----': () => {
         searchResults.sort((a, b) => a.index - b.index);
@@ -233,7 +225,7 @@ class Database extends Component {
                       <Typography variant="h5">{result.name}</Typography>
                       <Typography>
                         {result.position}, {result.experience} year
-                        {result.experience == 1 ? '' : 's'}
+                        {result.experience === 1 ? '' : 's'}
                       </Typography>
                     </Grid>
                     <Grid item xs={4}>
@@ -276,10 +268,10 @@ class Database extends Component {
             ))}
           </Card>
         </PageBody>
-        <Grow in={this.state.openSnackBar == true}>
+        <Grow in={this.state.openSnackBar === true}>
           <Snackbar
             anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-            open={this.state.openSnackBar == true}
+            open={this.state.openSnackBar === true}
             onClose={this.handleSnackbarClose}
           >
             <MuiAlert
@@ -287,11 +279,11 @@ class Database extends Component {
               variant="filled"
               onClose={this.handleSnackbarClose}
               severity={
-                this.state.typeSnackBar == 'searching'
+                this.state.typeSnackBar === 'searching'
                   ? 'info'
-                  : this.state.typeSnackBar == 'error'
+                  : this.state.typeSnackBar === 'error'
                   ? 'error'
-                  : this.state.typeSnackBar == 'success'
+                  : this.state.typeSnackBar === 'success'
                   ? 'success'
                   : ''
               }

@@ -1,23 +1,6 @@
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Button,
-  Card,
-  FormControl,
-  Grid,
-  InputLabel,
-  MenuItem,
-  Select,
-  TextField,
-  Toolbar,
-  Typography,
-} from '@material-ui/core';
+import { Button, Grid, TextField, Toolbar } from '@material-ui/core';
 import React, { Component } from 'react';
-import Header from './header.js';
 import SearchIcon from '@material-ui/icons/Search';
-import ArrowForwardIcon from '@material-ui/icons/ArrowForward';
-import PageBody from './pagebody.js';
 import { withStyles } from '@material-ui/core/styles';
 import { grey } from '@material-ui/core/colors';
 import axios from 'axios';
@@ -64,18 +47,18 @@ function validateSearchQueryParentheses(queryString) {
   let parenthesisTracker = 0;
   for (let i = 0; i < queryString.length; i++) {
     const char = queryString.charAt(i);
-    if (char == ')') parenthesisTracker--;
-    if (char == '(') parenthesisTracker++;
+    if (char === ')') parenthesisTracker--;
+    if (char === '(') parenthesisTracker++;
     if (parenthesisTracker < 0) return false;
   }
-  return parenthesisTracker == 0;
+  return parenthesisTracker === 0;
 }
 
 function validateSearchQueryMacros(queryString) {
   const regExpMacro = /\$\d*\$/;
   const queryStringMacros = queryString.match(regExpMacro);
   // console.log(queryStringMacros);
-  return !queryStringMacros || queryStringMacros.length == 0;
+  return !queryStringMacros || queryStringMacros.length === 0;
 }
 
 function validateSearchQuery(queryString) {
@@ -84,7 +67,7 @@ function validateSearchQuery(queryString) {
   const issues = [];
   if (!parenthesesGood) issues.push('Mismatched parentheses');
   if (!macrosGood) issues.push('Query contains a problematic search macro');
-  return { good: issues.length == 0, issues };
+  return { good: issues.length === 0, issues };
 }
 
 class SearchBar extends Component {
@@ -119,10 +102,10 @@ class SearchBar extends Component {
     // Split string on "|", "&", "!", "*", "(", and ")"; then remove leading/trailing whitespace and remove empty terms
     const searchTerms = searchText
       .toLowerCase()
-      .split(/[\|\*&!\(\)]+/)
+      .split(/[|*&!()]+/)
       .map((term) => term.trim());
     const trimmedSearchTerms = searchTerms.filter(
-      (term, index) => term || index == searchTerms.length - 1
+      (term, index) => term || index === searchTerms.length - 1
     );
     // console.log(trimmedSearchTerms);
     const lastTerm =
@@ -155,7 +138,7 @@ class SearchBar extends Component {
 
   onSearchChange(event, newValue, reason) {
     // console.log(`Change ${reason}; newVal ${newValue}`);
-    if (reason == 'select-option') {
+    if (reason === 'select-option') {
       // Handle yet another odd edge case caused by poor autocomplete behavior
       if (newValue === undefined) {
         const { searchText } = this.state;
@@ -166,7 +149,7 @@ class SearchBar extends Component {
       // Cut last search term and replace
       const { searchText } = this.state;
       const lastTerm = this.getLastTerm(searchText);
-      if (!lastTerm || searchText.lastIndexOf(lastTerm) == -1) {
+      if (!lastTerm || searchText.lastIndexOf(lastTerm) === -1) {
         // Handle select from empty string
         this.setState(
           { searchText: searchText + newValue },
@@ -191,7 +174,7 @@ class SearchBar extends Component {
 
   onSearchInputChange(event, newValue, reason) {
     // console.log(`Change ${reason}; newVal ${newValue}`);
-    if (reason == 'input')
+    if (reason === 'input')
       this.setState({ searchText: newValue }, this.updateSearchOptions);
   }
 
@@ -247,4 +230,3 @@ class SearchBar extends Component {
 }
 
 export default withStyles(styles)(SearchBar);
-

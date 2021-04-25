@@ -3,7 +3,6 @@ import Header from './shared/header.js';
 import PageBody from './shared/pagebody.js';
 import {
   Button,
-  IconButton,
   Card,
   Typography,
   TextField,
@@ -11,7 +10,6 @@ import {
   Grid,
 } from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles';
-import { withCookies, Cookies } from 'react-cookie';
 import axios from 'axios';
 import EditIcon from '@material-ui/icons/Edit';
 import CancelIcon from '@material-ui/icons/Cancel';
@@ -119,7 +117,7 @@ class Profile extends Component {
   }
 
   render() {
-    const { userID, classes, cookies } = this.props;
+    const { userID, classes } = this.props;
     const { originalProfileDetails, newProfileDetails, isEditing } = this.state;
     const hasProfileChanged = Object.keys(formFields).reduce(
       (accumulator, field) => {
@@ -128,7 +126,7 @@ class Profile extends Component {
         );
         return (
           accumulator ||
-          originalProfileDetails[field] != newProfileDetails[field]
+          originalProfileDetails[field] !== newProfileDetails[field]
         );
       },
       false

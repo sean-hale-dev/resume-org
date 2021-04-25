@@ -8,7 +8,6 @@ import {
   Card,
   Typography,
   Grid,
-  TextField,
   InputAdornment,
   FormControl,
   OutlinedInput,
@@ -18,7 +17,6 @@ import {
 } from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles';
 import './styles/resume.css';
-import { grey } from '@material-ui/core/colors';
 import axios from 'axios';
 import EditIcon from '@material-ui/icons/Edit';
 import CancelIcon from '@material-ui/icons/Cancel';
@@ -69,18 +67,22 @@ class Resume extends Component {
   }
 
   setResume(file) {
-    if (file != undefined) {
+    if (file !== undefined) {
       console.log('Set Success - Initial file: ', this.state.resumeFile);
-      this.state.resumeFile = file;
+      this.setState({
+        resumeFile: file,
+      });
       console.log('Set Success - Uploaded file: ', this.state.resumeFile);
     } else {
       console.log('Set Fail - No file yet');
-      this.state.resumeFile = undefined;
+      this.setState({
+        resumeFile: undefined,
+      });
     }
   }
 
   uploadResume() {
-    if (this.state.resumeFile != undefined) {
+    if (this.state.resumeFile !== undefined) {
       console.log(
         'Upload Success- Will post the file: ',
         this.state.resumeFile
@@ -123,7 +125,7 @@ class Resume extends Component {
   }
 
   handleSnackbarClose = (event, reason) => {
-    if (reason == 'clickaway') return;
+    if (reason === 'clickaway') return;
     this.setState({ openSnackBar: false });
   };
 
@@ -194,7 +196,7 @@ class Resume extends Component {
     );
 
     const haveSkillsChanged = !(
-      filteredSkillsSet.size == filteredEditedSkillsSet.size &&
+      filteredSkillsSet.size === filteredEditedSkillsSet.size &&
       [...filteredSkillsSet].reduce(
         (allSkillsMatch, skill) =>
           allSkillsMatch &&
@@ -323,10 +325,10 @@ class Resume extends Component {
             </Button>
           </Card>
         </PageBody>
-        <Grow in={this.state.openSnackBar == true}>
+        <Grow in={this.state.openSnackBar === true}>
           <Snackbar
             anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-            open={this.state.openSnackBar == true}
+            open={this.state.openSnackBar === true}
             onClose={this.handleSnackbarClose}
           >
             <MuiAlert
@@ -334,20 +336,20 @@ class Resume extends Component {
               variant="filled"
               onClose={this.handleSnackbarClose}
               severity={
-                this.state.typeSnackBar == 'loading'
+                this.state.typeSnackBar === 'loading'
                   ? 'info'
-                  : this.state.typeSnackBar == 'error'
+                  : this.state.typeSnackBar === 'error'
                   ? 'error'
-                  : this.state.typeSnackBar == 'success'
+                  : this.state.typeSnackBar === 'success'
                   ? 'success'
                   : ''
               }
             >
-              {this.state.typeSnackBar == 'loading'
+              {this.state.typeSnackBar === 'loading'
                 ? 'Loading...'
-                : this.state.typeSnackBar == 'error'
+                : this.state.typeSnackBar === 'error'
                 ? 'There was an error uploading the file.'
-                : this.state.typeSnackBar == 'success'
+                : this.state.typeSnackBar === 'success'
                 ? `The file '${this.state.resumeFile.name}' was successfully uploaded.`
                 : ''}
             </MuiAlert>
