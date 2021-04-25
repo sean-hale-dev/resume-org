@@ -85,7 +85,7 @@ class SearchBar extends Component {
     const {userID, location} = this.props;
     const {searchText} = this.state;
     const { good, issues } = validateSearchQuery(searchText);
-    if (good && (new URLSearchParams(location.search)).get("autoSearch")) {
+    if (good && (new URLSearchParams(location.search)).get("autoSearch") && searchText) {
       this.handleSearch();
     }
     // TODO: Call server for this

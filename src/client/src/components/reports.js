@@ -1,4 +1,4 @@
-import { Card, Toolbar, Typography, Snackbar, Grow } from '@material-ui/core';
+import { Card, Toolbar, Typography, Snackbar, Grow, Button } from '@material-ui/core';
 import React, { Component } from 'react';
 import Header from './shared/header.js';
 import PageBody from './shared/pagebody.js';
@@ -7,6 +7,7 @@ import { red } from '@material-ui/core/colors';
 import SearchBar from './shared/searchBar.js';
 import axios from 'axios';
 import MuiAlert from '@material-ui/lab/Alert';
+import ArrowForwardIcon from '@material-ui/icons/ArrowForward';
 
 const styles = (theme) => ({
   searchField: {
@@ -53,6 +54,7 @@ class Reports extends Component {
       .then((res) => {
         console.log(res);
         this.setState({
+          searchText,
           result: res.data,
           openSnackBar: true,
           typeSnackBar: 'success',
@@ -75,9 +77,24 @@ class Reports extends Component {
     this.setState({ openSnackBar: false });
   };
 
+  jumpToSearch(newSearchText) {
+    const { location, history } = this.props;
+    const { searchText } = this.state;
+    const reportSearch = (new URLSearchParams(location.search));
+    reportSearch.set("autoSearch", "true");
+    reportSearch.set("searchText", searchText);
+    history.replace({search: reportSearch.toString()});
+    const search = new URL(window.location);
+    search.searchParams.set("searchText", newSearchText);
+    search.searchParams.set("autoSearch", "true");
+    search.pathname = "/database";
+    window.location = search.toString();
+  }
+
   render() {
     const { classes, userID, clientPermissions, location, history } = this.props;
-    const { result } = this.state;
+    const { result, searchText } = this.state;
+    const skillsArray = (result && result.individualSkillMatches && Object.keys(result.individualSkillMatches)) || [];
     return (
       <>
         <Header selectedPage="Reports" userID={userID} clientPermissions={clientPermissions} />
@@ -107,32 +124,59 @@ class Reports extends Component {
                   </Typography>
                 ) : (
                   <>
-                    <Typography>
-                      There {result.employeeCount === 1 ? 'is' : 'are'}{' '}
-                      {result.employeeCount} employee
-                      {result.employeeCount === 1 ? '' : 's'} in the
-                      organization.{' '}
-                      {result.employeeCount === 1 ? '' : 'Of those:'}
-                    </Typography>
-                    <Typography>
-                      {result.strictMatchCount} strictly match
-                      {result.strictMatchCount === 1 ? 'es' : ''} the query (
-                      {(
-                        (100.0 * result.strictMatchCount) /
-                        result.employeeCount
-                      ).toFixed(2)}
-                      % of the organization).
-                    </Typography>
-                    <Typography>
-                      {result.looseMatchCount}{' '}
-                      {result.looseMatchCount === 1 ? 'has' : 'have'} at least
-                      one skill in the query (
-                      {(
-                        (100.0 * result.looseMatchCount) /
-                        result.employeeCount
-                      ).toFixed(2)}
-                      % of the organization).
-                    </Typography>
+                    {result.employeeCount !== undefined &&
+                      <Typography>
+                        There {result.employeeCount === 1 ? 'is' : 'are'}{' '}
+                        {result.employeeCount} employee
+                        {result.employeeCount === 1 ? '' : 's'} in the
+                        organization.{' '}
+                        {result.employeeCount === 1 ? '' : 'Of those:'}
+                      </Typography>
+                    }
+                    {Object.entries(result.individualSkillMatches).length > 1 && 
+                    result.strictMatchCount !== undefined &&
+                      <Typography>
+                        {result.strictMatchCount} strictly match
+                        {result.strictMatchCount === 1 ? 'es' : ''} the query (
+                        {(
+                          (100.0 * result.strictMatchCount) /
+                          result.employeeCount
+                        ).toFixed(2)}
+                        % of the organization).
+                        <Button
+                          onClick={() => {
+                            this.jumpToSearch(searchText);
+                          }}
+                          value={result.employeeID}
+                        >
+                          View Resumes
+                          <ArrowForwardIcon />
+                        </Button>
+                      </Typography>
+                      
+                    }
+                    {Object.entries(result.individualSkillMatches).length > 1 && 
+                    result.looseMatchCount !== undefined &&
+                      <Typography>
+                        {result.looseMatchCount}{' '}
+                        {result.looseMatchCount === 1 ? 'has' : 'have'} at least
+                        one skill in the query (
+                        {(
+                          (100.0 * result.looseMatchCount) /
+                          result.employeeCount
+                        ).toFixed(2)}
+                        % of the organization).
+                        <Button
+                          onClick={() => {
+                            this.jumpToSearch(skillsArray.join(" | "));
+                          }}
+                          value={result.employeeID}
+                        >
+                          View Resumes
+                          <ArrowForwardIcon />
+                        </Button>
+                      </Typography>
+                    }
                     {Object.entries(result.individualSkillMatches).map(
                       ([skill, count]) => (
                         <Typography>
@@ -140,6 +184,15 @@ class Reports extends Component {
                           {skill}" (
                           {((100.0 * count) / result.employeeCount).toFixed(2)}%
                           of the organization).
+                          <Button
+                            onClick={() => {
+                              this.jumpToSearch(skill);
+                            }}
+                            value={result.employeeID}
+                          >
+                            View Resumes
+                            <ArrowForwardIcon />
+                          </Button>
                         </Typography>
                       )
                     )}
