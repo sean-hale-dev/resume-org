@@ -5,6 +5,7 @@ import { withStyles } from '@material-ui/core/styles';
 import { grey } from '@material-ui/core/colors';
 import axios from 'axios';
 import Autocomplete from '@material-ui/lab/Autocomplete';
+import {useLocation} from 'react-router-dom';
 
 const styles = (theme) => ({
   searchField: {
@@ -74,7 +75,7 @@ class SearchBar extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      searchText: '',
+      searchText: (new URLSearchParams(useLocation().search)).get("searchText") || "",
       searchOptions: [],
       activeOptions: [],
     };
@@ -131,6 +132,13 @@ class SearchBar extends Component {
     this.setState({ activeOptions });
   }
 
+  setSearchText(searchText) {
+    this.setState({searchText}, () => {
+      (new URLSearchParams(useLocation().search)).set("searchText", searchText);
+      this.updateSearchOptions();
+    })
+  }
+
   handleSearch() {
     const { handleSearch } = this.props;
     const { searchText } = this.state;
@@ -144,7 +152,7 @@ class SearchBar extends Component {
       if (newValue === undefined) {
         const { searchText } = this.state;
         // console.log(`Undefined detected; searchText: ${searchText}`);
-        this.setState({ searchText: '' }, () => this.setState({ searchText }));
+        this.setState({ searchText: '' }, () => this.setSearchText(searchText));
         return;
       }
       // Cut last search term and replace
@@ -152,10 +160,11 @@ class SearchBar extends Component {
       const lastTerm = this.getLastTerm(searchText);
       if (!lastTerm || searchText.lastIndexOf(lastTerm) === -1) {
         // Handle select from empty string
-        this.setState(
-          { searchText: searchText + newValue },
-          this.updateSearchOptions
-        );
+        // this.setState(
+        //   { searchText: searchText + newValue },
+        //   this.updateSearchOptions
+        // );
+        this.setSearchText(searchText + newValue);
       } else {
         const otherText = searchText.substring(
           0,
@@ -164,10 +173,11 @@ class SearchBar extends Component {
         // The multiple setState calls are necessary to deal with a buggy Autocomplete edge case where selecting an option but not updating
         // state causes the option to fill the text field rather than the correct controlled value.
         this.setState({ searchText: otherText }, () =>
-          this.setState(
-            { searchText: otherText + newValue },
-            this.updateSearchOptions
-          )
+          // this.setState(
+          //   { searchText: otherText + newValue },
+          //   this.updateSearchOptions
+          // )
+          this.setSearchText(otherText + newValue)
         );
       }
     }
