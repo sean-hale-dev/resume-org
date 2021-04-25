@@ -24,6 +24,7 @@ class App extends Component {
     this.state = {
       clientPermissions: props.cookies.get('clientPermissions') || {},
     }
+    // Tracking variable for the userID associated with current client permissions
     this.clientPermissionUserID = props.cookies.get('userID');
   }
 
@@ -31,13 +32,14 @@ class App extends Component {
     this.updatePermissions();
   }
 
+  /**
+   * Update client permissions to ensure that they match userID
+   */
   updatePermissions() {
     const { cookies } = this.props;
     const userID = cookies.get('userID');
     this.clientPermissionUserID = userID;
-    // console.log(`Updating permissions for ${userID}`);
     axios.get(`http://${window.location.hostname}:8080/getClientPermissions?userID=${userID}`).then(res => {
-      // console.log(res.data);
       cookies.set('clientPermissions', res.data);
       this.setState({clientPermissions: res.data}, () => {
         this.updatingPermissions = false;
@@ -49,21 +51,22 @@ class App extends Component {
     const { clientPermissions } = this.state;
     const { cookies, history } = this.props;
     const userID = cookies.get('userID');
+
+    // Update client permissions on cookie update
     let shouldRedirect = true;
     if (userID != this.clientPermissionUserID) {
       this.updatingPermissions = true;
-      // shouldRedirect = false;
       this.clientPermissionUserID = userID;
       this.updatePermissions();
     }
     if (this.updatingPermissions) {
       shouldRedirect = false;
     }
+
     return (
       <ThemeProvider theme={resume_org_theme}>
         <Router>
           <Switch>
-            {/* <Route exact path="/" render={props => <Home {...props} userID={userID} />} /> */}
             <Route exact path="/">
               <Redirect to={userID ? '/resume' : '/login'} />
             </Route>
@@ -138,10 +141,7 @@ class App extends Component {
         </Router>
       </ThemeProvider>
     );
-
   }
-
-
 }
 
 export default withCookies(App);

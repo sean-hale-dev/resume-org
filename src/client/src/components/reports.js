@@ -28,6 +28,13 @@ const styles = (theme) => ({
   },
 });
 
+/**
+ * Props:
+ * @param {String} userID userID string
+ * @param {Object} clientPermissions Object containing list of links that client has access to
+ * @param {*} location React Router location
+ * @param {*} history "history" library object
+ */
 class Reports extends Component {
   constructor(props) {
     super(props);
@@ -38,9 +45,12 @@ class Reports extends Component {
     };
   }
 
+  /**
+   * Search for a string!
+   * @param {String} searchText 
+   */
   handleSearch(searchText) {
     const {userID} = this.props;
-    console.log(`Searching for ${searchText}`);
     this.setState({
       openSnackBar: true,
       typeSnackBar: 'generating',
@@ -77,6 +87,10 @@ class Reports extends Component {
     this.setState({ openSnackBar: false });
   };
 
+  /**
+   * Go to the '/database' page with the search defined by newSearchText
+   * @param {String} newSearchText 
+   */
   jumpToSearch(newSearchText) {
     const { location, history } = this.props;
     const { searchText } = this.state;

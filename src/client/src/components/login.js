@@ -22,6 +22,11 @@ const styles = (theme) => ({
   },
 });
 
+/**
+ * Props:
+ * @param {String} userID userID string
+ * @param {Object} clientPermissions Object containing list of links that client has access to
+ */
 class Login extends Component {
   constructor(props) {
     super(props);
@@ -31,6 +36,9 @@ class Login extends Component {
     };
   }
 
+  /**
+   * Log in as a user.
+   */
   handleLogin() {
     const { userText } = this.state;
     const { cookies } = this.props;
@@ -47,6 +55,9 @@ class Login extends Component {
     });
   }
 
+  /**
+   * Log out current user.
+   */
   handleLogout() {
     const { cookies } = this.props;
     cookies.set('userID', '');

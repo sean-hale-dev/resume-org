@@ -7,8 +7,6 @@ import { CookiesProvider } from 'react-cookie';
 import { createBrowserHistory } from "history";
 const customHistory = createBrowserHistory();
 
-// console.log("Index?");
-
 ReactDOM.render(
   <React.StrictMode>
     <CookiesProvider>

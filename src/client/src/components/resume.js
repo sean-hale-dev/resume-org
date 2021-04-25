@@ -45,6 +45,11 @@ const styles = (theme) => ({
   },
 });
 
+/**
+ * Props:
+ * @param {String} userID userID string
+ * @param {Object} clientPermissions Object containing list of links that client has access to
+ */
 class Resume extends Component {
   constructor(props) {
     super(props);
@@ -74,6 +79,10 @@ class Resume extends Component {
       });
   }
 
+  /**
+   * View an employee's resume
+   * @param {String} employeeID 
+   */
   openResumeDialog = (employeeID) => {
     this.setState({
       resumeDialogOpen: true,
@@ -81,6 +90,9 @@ class Resume extends Component {
     });
   };
 
+  /**
+   * Stop viewing a resume
+   */
   closeResumeDialog = () => {
     this.setState({
       resumeDialogOpen: false,
@@ -88,6 +100,10 @@ class Resume extends Component {
     });
   };
 
+  /**
+   * Set the file to what the user uploads
+   * @param {*} file 
+   */
   setResume(file) {
     if (file !== undefined) {
       console.log('Set Success - Initial file: ', this.state.resumeFile);
@@ -103,6 +119,9 @@ class Resume extends Component {
     }
   }
 
+  /**
+   * Handle resume upload
+   */
   uploadResume() {
     const {userID} = this.props;
     if (this.state.resumeFile !== undefined) {
@@ -152,6 +171,9 @@ class Resume extends Component {
     this.setState({ openSnackBar: false });
   };
 
+  /**
+   * Open skill editing
+   */
   openEdit() {
     const { skills } = this.state;
     this.setState({
@@ -160,24 +182,39 @@ class Resume extends Component {
     });
   }
 
+  /**
+   * Edit a skill at index
+   * @param {integer} index Index of the skill
+   * @param {String} newValue 
+   */
   onSkillEdit(index, newValue) {
     const { editedSkills } = this.state;
     editedSkills[index] = newValue;
     this.setState({ editedSkills });
   }
 
+  /**
+   * Add a new skill
+   */
   onSkillAdd() {
     const { editedSkills } = this.state;
     editedSkills.push('');
     this.setState({ editedSkills });
   }
 
+  /**
+   * Delete a skill
+   * @param {integer} index Index of skill to delete
+   */
   onSkillDelete(index) {
     const { editedSkills } = this.state;
     editedSkills.splice(index, 1);
     this.setState({ editedSkills });
   }
 
+  /**
+   * Cancel skill editing
+   */
   cancelEditing() {
     const { skills } = this.state;
     this.setState({
@@ -186,10 +223,12 @@ class Resume extends Component {
     });
   }
 
+  /**
+   * Save skill edits and stop editing
+   */
   saveEdits() {
     const { editedSkills } = this.state;
     const { userID } = this.props;
-    // TODO: Send data to server
     axios.post(
       `http://${window.location.hostname}:8080/api/updateResumeSkills`,
       {
@@ -228,7 +267,7 @@ class Resume extends Component {
         true
       )
     );
-    // console.log(editedSkills);
+
     return (
       <>
         <Header selectedPage="Your Resume" userID={userID} clientPermissions={clientPermissions} />
@@ -249,7 +288,6 @@ class Resume extends Component {
                         <FormControl>
                           <OutlinedInput
                             value={skill}
-                            // InputLabelProps={{shrink: (newProfileDetails[field] ? true : false)}}
                             className={classes.skillField}
                             onChange={(event) => {
                               this.onSkillEdit(index, event.target.value);

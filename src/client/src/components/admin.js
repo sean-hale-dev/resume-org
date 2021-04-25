@@ -1,17 +1,9 @@
 import React, {Component} from 'react';
 import Header from './shared/header.js';
 import PageBody from './shared/pagebody.js';
-import { Button, IconButton, Card, Typography, TextField, Toolbar, Grid, FormControl, InputLabel, Select, MenuItem } from '@material-ui/core';
+import { Button, Card, Typography, TextField, Toolbar, Grid, FormControl, InputLabel, Select, MenuItem } from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles'
-import { withCookies, Cookies } from 'react-cookie';
 import axios from 'axios';
-import {
-  BrowserRouter as Router,
-  Switch,
-  Route,
-  Link,
-  Redirect
-} from "react-router-dom";
 import EditIcon from '@material-ui/icons/Edit';
 import CancelIcon from '@material-ui/icons/Cancel';
 import SaveIcon from '@material-ui/icons/Save';
@@ -67,6 +59,11 @@ const PERMISSION_LEVELS = {
   "Admin": 3,
 }
 
+/**
+ * Copy a user object.
+ * @param {Object} user 
+ * @returns A shallow copy of the provided user
+ */
 function copyUser(user) {
   const copy = {};
   Object.entries(user).forEach(([field, value]) => {
@@ -75,17 +72,33 @@ function copyUser(user) {
   return copy;
 }
 
+/**
+ * Compare two strings
+ * @param {String} a 
+ * @param {String} b 
+ * @returns 1 if a > b, -1 if a < 0, 0 if a == b
+ */
 const stringCompare = (a, b) => {
   if (a < b) return -1;
   if (a > b) return 1;
   return 0;
 }
 
+/**
+ * Check whether a user has been edited
+ * @param {String} user 
+ * @returns Boolean of whether the user has been edited.
+ */
 function hasUserDataChanged(user) {
   const {userData, editedUserData} = user;
   return Object.keys(USER_FIELDS).reduce((accumulator, field) => accumulator || userData[field] != editedUserData[field], false);
 }
 
+/**
+ * Props:
+ * @param {String} userID userID string
+ * @param {Object} clientPermissions Object containing list of links that client has access to
+ */
 class Admin extends Component {
   constructor(props) {
     super(props);
@@ -102,9 +115,7 @@ class Admin extends Component {
 
   componentDidMount() {
     const {userID} = this.props;
-    console.log("Component mounted");
     axios.post(`http://${window.location.hostname}:8080/adminGetProfiles`, {userID}).then(res => {
-      console.log(res);
       this.setState({users: res.data.map((user, index) => ({
         index,
         editing: false,
@@ -114,32 +125,31 @@ class Admin extends Component {
     })
   }
 
+  /**
+   * Start editing a user
+   * @param {String} user 
+   */
   startEditing(user) {
     const {users} = this.state;
     user.isEditing = true;
     this.setState({users});
-    // this.setState({users: users.map(user => {
-    //   if (user.index == index) {
-    //     user.isEditing = true;
-    //   }
-    //   return user;
-    // })});
   }
 
+  /**
+   * Stop editing a user
+   * @param {String} user 
+   */
   cancelEditing(user) {
     const {users} = this.state;
     user.isEditing = false;
     user.editedUserData = copyUser(user.userData);
     this.setState({users});
-    // this.setState({users: users.map(user => {
-    //   if (user.index == index) {
-    //     user.isEditing = false;
-    //     user.editedUserData = copyUser(user.userData);
-    //   }
-    //   return user;
-    // })});
   }
 
+  /**
+   * Save edits to a user and stop editing
+   * @param {String} user 
+   */
   saveEdits(user) {
     const {userID, cookies} = this.props;
     const {users} = this.state;
@@ -173,6 +183,11 @@ class Admin extends Component {
     }
   }
 
+  /**
+   * Delete a user from the site!
+   * @param {String} user 
+   * @param {number} index Index of user in 'users' array
+   */
   deleteUser(user, index) {
     const {userID} = this.props;
     const {users} = this.state;
@@ -187,16 +202,28 @@ class Admin extends Component {
     )
   }
 
+  /**
+   * Open a dialog letting users opt out of a risky action if they wish to cancel
+   * @param {String} warningTitle 
+   * @param {String} warningText 
+   * @param {Function} acceptFunction Function that runs on accepting the warning
+   */
   openWarningDialog(warningTitle, warningText, acceptFunction) {
     this.setState({
       warning: {warningTitle, warningText, acceptFunction}
     });
   }
 
+  /**
+   * Close warning dialog
+   */
   cancelWarningDialog() {
     this.setState({warning: false});
   }
 
+  /**
+   * Accept the warning dialog and run the associated function
+   */
   acceptWarningDialog() {
     const {warning} = this.state;
     if (warning && warning.acceptFunction) warning.acceptFunction();
@@ -204,10 +231,11 @@ class Admin extends Component {
   }
 
   render() {
-    const {userID, classes, cookies, clientPermissions} = this.props;
+    const {userID, classes, clientPermissions} = this.props;
     const {users, warning} = this.state;
     console.log(users);
 
+    // Sorting functions
     const sortOptions = {
       "----": () => {
         users.sort((a, b) => a.index - b.index);
@@ -297,7 +325,6 @@ class Admin extends Component {
                             InputLabelProps={{shrink: (user.editedUserData[field] ? true : false)}}
                             className={classes.profileField}
                             onChange={event => {
-                              // this.onFormFieldChange(field, event.target.value)
                               user.editedUserData[field] = event.target.value;
                               this.setState({users});
                             }}
@@ -310,7 +337,6 @@ class Admin extends Component {
                             InputLabelProps={{shrink: (user.editedUserData[field] ? true : false)}}
                             className={classes.profileField}
                             onChange={event => {
-                              // this.onFormFieldChange(field, event.target.value)
                               user.editedUserData[field] = event.target.value;
                               this.setState({users});
                             }}
@@ -322,7 +348,6 @@ class Admin extends Component {
                               labelId="results-sort-label" 
                               id="results-sort" 
                               onChange={event => {
-                                // sortOptions[event.target.value]()
                                 user.editedUserData[field] = event.target.value;
                                 this.setState({users});
                               }}

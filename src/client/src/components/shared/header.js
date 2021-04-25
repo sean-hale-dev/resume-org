@@ -10,7 +10,6 @@ import MenuIcon from '@material-ui/icons/Menu';
 import Typography from '@material-ui/core/Typography';
 import Grid from '@material-ui/core/Grid';
 import Link from '@material-ui/core/Link';
-import axios from 'axios';
 
 const PAGES = [
   {
@@ -34,19 +33,23 @@ const PAGES = [
 /**
  * Props:
  * @param {String} selectedPage Currently active page. Used as title.
+ * @param {String} userID User ID
+ * @param {Object} clientPermissions Object containing list of links that client has access to
  */
 class Header extends Component {
   constructor(props) {
     super(props);
     this.state = {
       open: false,
-      // clientPermissions: {},
-      // clientPermissionUserID: props.userID,
     };
   }
 
-  
-
+  /**
+   * Function constructor to toggle the drawer.
+   * @param {boolean} open Optional. If undefined, creates a function that toggles the drawer. If defined, creates a function that
+   * sets the open property to its definition.
+   * @returns Function that toggles/opens/closes the drawer: format toggle(event)
+   */
   toggleDrawer(open = undefined) {
     return (event) => {
       if (
@@ -65,11 +68,8 @@ class Header extends Component {
   }
 
   render() {
-    const { open/*, clientPermissions, clientPermissionUserID*/ } = this.state;
+    const { open } = this.state;
     const { selectedPage, userID, clientPermissions } = this.props;
-    // if (userID != clientPermissionUserID) {
-    //   this.updatePermissions();
-    // }
     console.log(`Selected page: ${selectedPage}`);
     return (
       <AppBar position="static">
