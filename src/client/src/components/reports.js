@@ -74,11 +74,11 @@ class Reports extends Component {
   };
 
   render() {
-    const { classes, userID } = this.props;
+    const { classes, userID, clientPermissions } = this.props;
     const { result } = this.state;
     return (
       <>
-        <Header selectedPage="Reports" userID={userID} />
+        <Header selectedPage="Reports" userID={userID} clientPermissions={clientPermissions} />
         <PageBody>
           <Card>
             <SearchBar

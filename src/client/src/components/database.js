@@ -145,7 +145,7 @@ class Database extends Component {
   handleSortSelect(selectedSort) {}
 
   render() {
-    const { classes, userID } = this.props;
+    const { classes, userID, clientPermissions } = this.props;
     const { searchResults } = this.state;
     const sortOptions = {
       '----': () => {
@@ -184,7 +184,7 @@ class Database extends Component {
 
     return (
       <>
-        <Header selectedPage="Resume Database" userID={userID} />
+        <Header selectedPage="Resume Database" userID={userID}  clientPermissions={clientPermissions}/>
         <PageBody>
           <Card>
             <SearchBar

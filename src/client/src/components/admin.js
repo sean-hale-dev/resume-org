@@ -204,7 +204,7 @@ class Admin extends Component {
   }
 
   render() {
-    const {userID, classes, cookies} = this.props;
+    const {userID, classes, cookies, clientPermissions} = this.props;
     const {users, warning} = this.state;
     console.log(users);
 
@@ -263,7 +263,7 @@ class Admin extends Component {
           </DialogActions>
         </Dialog>
       }
-      <Header selectedPage="Admin Dashboard" userID={userID}/>
+      <Header selectedPage="Admin Dashboard" userID={userID} clientPermissions={clientPermissions}/>
       <PageBody>
         <Card className={classes.resultsCard}>
           <Grid container alignItems="center">

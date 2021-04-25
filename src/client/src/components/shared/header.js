@@ -10,6 +10,7 @@ import MenuIcon from '@material-ui/icons/Menu';
 import Typography from '@material-ui/core/Typography';
 import Grid from '@material-ui/core/Grid';
 import Link from '@material-ui/core/Link';
+import axios from 'axios';
 
 const PAGES = [
   {
@@ -24,6 +25,10 @@ const PAGES = [
     title: 'Reports',
     link: '/reports',
   },
+  {
+    title: 'Admin Dashboard',
+    link: '/admin',
+  },
 ];
 
 /**
@@ -35,8 +40,12 @@ class Header extends Component {
     super(props);
     this.state = {
       open: false,
+      // clientPermissions: {},
+      // clientPermissionUserID: props.userID,
     };
   }
+
+  
 
   toggleDrawer(open = undefined) {
     return (event) => {
@@ -56,22 +65,25 @@ class Header extends Component {
   }
 
   render() {
-    const { open } = this.state;
-    const { selectedPage, userID } = this.props;
+    const { open/*, clientPermissions, clientPermissionUserID*/ } = this.state;
+    const { selectedPage, userID, clientPermissions } = this.props;
+    // if (userID != clientPermissionUserID) {
+    //   this.updatePermissions();
+    // }
     console.log(`Selected page: ${selectedPage}`);
     return (
       <AppBar position="static">
         <Grid container>
           <Grid item xs={2}>
             <Toolbar>
-              <SwipeableDrawer
+              {PAGES.filter(page => clientPermissions[page.link]).length > 0 && <><SwipeableDrawer
                 anchor={'left'}
                 open={open}
                 onClose={this.toggleDrawer(false)}
                 onOpen={this.toggleDrawer(true)}
               >
                 <List style={{ width: '250px' }}>
-                  {PAGES.map((page) => (
+                  {PAGES.filter(page => clientPermissions[page.link]).map((page) => (
                     <Link href={page.link} color="inherit">
                       <ListItem button key={page.title}>
                         <ListItemText
@@ -94,7 +106,7 @@ class Header extends Component {
                 onClick={this.toggleDrawer()}
               >
                 <MenuIcon />
-              </IconButton>
+              </IconButton></>}
             </Toolbar>
           </Grid>
           <Grid item xs={8}>

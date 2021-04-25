@@ -220,6 +220,7 @@ mongo_client.connect(
      * @query userID Fully optional; userID to check
      */
     app.get('/getClientPermissions', (req, res) => {
+      console.log("Getting client permissions");
       const { userID } = req.query;
       hasServerPermission(userID, db, '/getClientPermissions').then(authorized => {
         if (authorized) {
