@@ -190,6 +190,7 @@ class Database extends Component {
         <PageBody>
           <Card>
             <SearchBar
+              userID={userID}
               searchLabelText="Search Resumes"
               searchButtonText="Search"
               handleSearch={(searchText) => this.handleSearch(searchText)}
