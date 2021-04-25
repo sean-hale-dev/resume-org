@@ -138,10 +138,12 @@ class SearchBar extends Component {
   }
 
   setSearchText(searchText) {
+    const {location, history} = this.props;
     console.log(`Setting search text to ${searchText}`);
-    const {location} = this.props;
     this.setState({searchText}, () => {
-      (new URLSearchParams(location.search)).set("searchText", searchText);
+      const search = (new URLSearchParams(location.search));
+      search.set("searchText", searchText);
+      history.replace({search: search.toString()});
       this.updateSearchOptions();
     })
   }

@@ -147,7 +147,7 @@ class Database extends Component {
   handleSortSelect(selectedSort) {}
 
   render() {
-    const { classes, userID, clientPermissions, location } = this.props;
+    const { classes, userID, clientPermissions, location, history } = this.props;
     const { searchResults } = this.state;
     const sortOptions = {
       '----': () => {
@@ -195,6 +195,7 @@ class Database extends Component {
               searchButtonText="Search"
               handleSearch={(searchText) => this.handleSearch(searchText)}
               location={location}
+              history={history}
             />
           </Card>
           <Card className={classes.resultsCard}>

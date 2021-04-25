@@ -76,7 +76,7 @@ class Reports extends Component {
   };
 
   render() {
-    const { classes, userID, clientPermissions, location } = this.props;
+    const { classes, userID, clientPermissions, location, history } = this.props;
     const { result } = this.state;
     return (
       <>
@@ -89,6 +89,7 @@ class Reports extends Component {
               searchButtonText="Generate Report"
               handleSearch={(searchText) => this.handleSearch(searchText)}
               location={location}
+              history={history}
             />
           </Card>
           {result && (

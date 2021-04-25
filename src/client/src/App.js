@@ -47,7 +47,7 @@ class App extends Component {
 
   render() {
     const { clientPermissions } = this.state;
-    const { cookies } = this.props;
+    const { cookies, history } = this.props;
     const userID = cookies.get('userID');
     let shouldRedirect = true;
     if (userID != this.clientPermissionUserID) {
@@ -92,7 +92,7 @@ class App extends Component {
               <Route
                 exact
                 path="/database"
-                render={(props) => <Database {...props} userID={userID} clientPermissions={clientPermissions}/>}
+                render={(props) => <Database {...props} userID={userID} clientPermissions={clientPermissions} history={history}/>}
               />
             }
             {shouldRedirect && clientPermissions["/reports"] === false ? 
@@ -106,7 +106,7 @@ class App extends Component {
               <Route
                 exact
                 path="/reports"
-                render={(props) => <Reports {...props} userID={userID} clientPermissions={clientPermissions}/>}
+                render={(props) => <Reports {...props} userID={userID} clientPermissions={clientPermissions} history={history}/>}
               />
             }
             <Route
