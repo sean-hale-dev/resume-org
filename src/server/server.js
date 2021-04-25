@@ -12,6 +12,8 @@ const mongo_client = require('mongodb');
 const search = require('./utils/search.js');
 const { strict } = require('assert');
 
+const endpointPrefix = '/api';
+
 // TODO: ADD AUTHENTICATION
 
 mongo_client.connect(
@@ -36,7 +38,7 @@ mongo_client.connect(
     app.use(bodyParser.urlencoded({ extended: false, limit: '10mb' }));
     app.use(bodyParser.json({ limit: '10mb' }));
 
-    app.post('/resume-upload', (req, res) => {
+    app.post(endpointPrefix + '/resume-upload', (req, res) => {
       var form = new formidable.IncomingForm();
       var userID;
       form.parse(req);
@@ -119,27 +121,26 @@ mongo_client.connect(
       });
     });
 
-    app.post('/resume-search', (req, res) => {
+    app.post(endpointPrefix + '/resume-search', (req, res) => {
       console.log('Searching');
       const queryString = req.body.queryString || '(c | !c)';
       resumeSearch(queryString, db, res);
     });
 
-    app.post('/resume-report', (req, res) => {
+    app.post(endpointPrefix + '/resume-report', (req, res) => {
       console.log('Generating report');
       const queryString = req.body.queryString || '(c | !c)';
       generateReport(queryString, db, res);
     });
 
     // TEMP
-    app.get('/resume-report', (req, res) => {
+    app.get(endpointPrefix + '/resume-report', (req, res) => {
       const queryString = 'javascript & c';
       generateReport(queryString, db, res);
-    })
-
+    });
 
     // lets the client download a resume from the database
-    app.get('/resume-download', (req, res) => {
+    app.get(endpointPrefix + '/resume-download', (req, res) => {
       // if searching by ObjectId
       if (req.query.id) {
         getResumeByID(db, mongo_client.ObjectId(req.query.id))
@@ -183,52 +184,57 @@ mongo_client.connect(
       }
     });
 
-    app.post('/login', (req, res) => {
+    app.post(endpointPrefix + '/login', (req, res) => {
       const { userID } = req.body;
       console.log(`Logging in ${userID}`);
       handleLogin(userID, db, res);
     });
 
-    app.post('/getProfile', (req, res) => {
+    app.post(endpointPrefix + '/getProfile', (req, res) => {
       const { userID } = req.body;
       getProfile(userID, db, res);
     });
 
-    app.post('/updateProfile', (req, res) => {
+    app.post(endpointPrefix + '/updateProfile', (req, res) => {
       const { userID, details } = req.body;
       updateProfile(userID, details, db, res);
     });
 
-    app.post('/getResumeSkills', (req, res) => {
+    app.post(endpointPrefix + '/getResumeSkills', (req, res) => {
       const { userID } = req.body;
       getResumeSkillsByUserID(userID, db, res);
     });
 
-    app.post('/updateResumeSkills', (req, res) => {
+    app.post(endpointPrefix + '/updateResumeSkills', (req, res) => {
       const { userID, skills } = req.body;
       updateResumeSkillsByUserID(userID, skills, db, res);
     });
 
-    app.get('/getAllSearchableSkills', (req, res) => {
+    app.get(endpointPrefix + '/getAllSearchableSkills', (req, res) => {
       getAllSearchableSkills(db, res);
-    })
+    });
 
     app.listen(port, () => {
       console.log(`Listening on *:${port}`);
     });
-});
+  }
+);
 
 // Get list of all skills for searching
 function getAllSearchableSkills(db, res) {
-  db.collection('skill_assoc').find({name: {$exists: true}}).toArray((err, results) => {
-    if (err) {
-      res.json([]);
-    } else {
-      const skills = results.filter(result => result.resumes && result.resumes.length).map(result => result.name);
-      // console.log(skills);
-      res.json(skills);
-    }
-  })
+  db.collection('skill_assoc')
+    .find({ name: { $exists: true } })
+    .toArray((err, results) => {
+      if (err) {
+        res.json([]);
+      } else {
+        const skills = results
+          .filter((result) => result.resumes && result.resumes.length)
+          .map((result) => result.name);
+        // console.log(skills);
+        res.json(skills);
+      }
+    });
 }
 
 // Validate search query
@@ -239,15 +245,15 @@ function validateSearchQueryParentheses(queryString) {
   let parenthesisTracker = 0;
   for (let i = 0; i < queryString.length; i++) {
     const char = queryString.charAt(i);
-    if (char == ")") parenthesisTracker--;
-    if (char == "(") parenthesisTracker++;
+    if (char == ')') parenthesisTracker--;
+    if (char == '(') parenthesisTracker++;
     if (parenthesisTracker < 0) return false;
   }
   return parenthesisTracker == 0;
 }
 
 function validateSearchQueryMacros(queryString) {
-  const regExpMacro = /\$\d*\$/; // Regular expression that matches search 
+  const regExpMacro = /\$\d*\$/; // Regular expression that matches search
   const queryStringMacros = queryString.match(regExpMacro);
   console.log(queryStringMacros);
   return !queryStringMacros || queryStringMacros.length == 0;
@@ -265,9 +271,9 @@ function validateSearchQuery(queryString) {
   const parenthesesGood = validateSearchQueryParentheses(queryString);
   const macrosGood = validateSearchQueryMacros(queryString);
   const issues = [];
-  if (!parenthesesGood) issues.push("Mismatched parentheses");
-  if (!macrosGood) issues.push("Query contains a problematic search macro");
-  return {good: issues.length == 0, issues};
+  if (!parenthesesGood) issues.push('Mismatched parentheses');
+  if (!macrosGood) issues.push('Query contains a problematic search macro');
+  return { good: issues.length == 0, issues };
 }
 
 // Fetch resume skills by userID
@@ -276,19 +282,19 @@ function getResumeSkillsByUserID(userID, db, res) {
   //   .findOne({ userID })
   //   .then((employee) => {
   //     if (employee && employee.resume) {
-        db.collection('resumes')
-          .findOne({employee: userID})
-          .then((resume) => {
-            if (resume && resume.skills) {
-              res.json({ skills: resume.skills });
-            } else {
-              res.json({ skills: [] });
-            }
-          });
-    //   } else {
-    //     res.json({ skills: [] });
-    //   }
-    // });
+  db.collection('resumes')
+    .findOne({ employee: userID })
+    .then((resume) => {
+      if (resume && resume.skills) {
+        res.json({ skills: resume.skills });
+      } else {
+        res.json({ skills: [] });
+      }
+    });
+  //   } else {
+  //     res.json({ skills: [] });
+  //   }
+  // });
 }
 
 // Update resume skills
@@ -299,65 +305,90 @@ function updateResumeSkillsByUserID(userID, skills, db, res) {
     skills && Array.isArray(skills)
       ? [...new Set(skills.filter((skill) => skill).map((skill) => `${skill}`))]
       : [];
-  
+
   const newSkillsSet = new Set(skills);
-  db.collection('resumes').findOne({employee: userID}).then(oldResume => {
-    if (!oldResume) {
-      res.json([]);
-      return;
-    };
-    const oldResumeSkillsSet = new Set(oldResume && oldResume.skills ? oldResume.skills : []);
-    const skillsToRemove = [...oldResumeSkillsSet].filter(skill => !newSkillsSet.has(skill));
-    const skillsToAdd = [...newSkillsSet].filter(skill => !oldResumeSkillsSet.has(skill));
-    console.log(`Old skills: ${JSON.stringify([...oldResumeSkillsSet])}`);
-    console.log(`New skills: ${JSON.stringify([...newSkillsSet])}`);
-    console.log(`Removing ${JSON.stringify(skillsToRemove)}`);
-    console.log(`Adding ${JSON.stringify(skillsToAdd)}`);
-    db.collection('skill_assoc').find({name: {$exists: true}}).toArray((err, allSkills) => {
-      let existingSkillNames = [];
-      if (!err) {
-        existingSkillNames = allSkills.map(result => result.name);
-      }
-      const existingSkillNamesSet = new Set(existingSkillNames);
-      const skillsToInitInSearch = skillsToAdd.filter(skill => !existingSkillNamesSet.has(skill));
-      console.log(`Initializing skills in skill_assoc: ${JSON.stringify(skillsToInitInSearch)}`);
-      const initSkills = async (skillsToInit) => {
-        if (skillsToInit.length) {
-          await db.collection('skill_assoc').insertMany(skillsToInitInSearch.map(name => ({name, resumes: []})));
-        }
+  db.collection('resumes')
+    .findOne({ employee: userID })
+    .then((oldResume) => {
+      if (!oldResume) {
+        res.json([]);
         return;
       }
-      initSkills(skillsToInitInSearch).then(() => {
-        db.collection('skill_assoc').updateMany(
-          {name: {$in: skillsToRemove}},
-          {$pull: {resumes: oldResume._id}}).then(() => {
-            db.collection('skill_assoc').updateMany(
-              {
-                name: {
-                  $in: skillsToAdd,
-                },
-              },
-              {
-                $push: {
-                  resumes: oldResume._id,
-                },
-              }
-            ).then(() => {
-              db.collection('resumes')
-              .updateOne(
-                {employee: userID},
-                {
-                  $set: { skills },
-                }
+      const oldResumeSkillsSet = new Set(
+        oldResume && oldResume.skills ? oldResume.skills : []
+      );
+      const skillsToRemove = [...oldResumeSkillsSet].filter(
+        (skill) => !newSkillsSet.has(skill)
+      );
+      const skillsToAdd = [...newSkillsSet].filter(
+        (skill) => !oldResumeSkillsSet.has(skill)
+      );
+      console.log(`Old skills: ${JSON.stringify([...oldResumeSkillsSet])}`);
+      console.log(`New skills: ${JSON.stringify([...newSkillsSet])}`);
+      console.log(`Removing ${JSON.stringify(skillsToRemove)}`);
+      console.log(`Adding ${JSON.stringify(skillsToAdd)}`);
+      db.collection('skill_assoc')
+        .find({ name: { $exists: true } })
+        .toArray((err, allSkills) => {
+          let existingSkillNames = [];
+          if (!err) {
+            existingSkillNames = allSkills.map((result) => result.name);
+          }
+          const existingSkillNamesSet = new Set(existingSkillNames);
+          const skillsToInitInSearch = skillsToAdd.filter(
+            (skill) => !existingSkillNamesSet.has(skill)
+          );
+          console.log(
+            `Initializing skills in skill_assoc: ${JSON.stringify(
+              skillsToInitInSearch
+            )}`
+          );
+          const initSkills = async (skillsToInit) => {
+            if (skillsToInit.length) {
+              await db
+                .collection('skill_assoc')
+                .insertMany(
+                  skillsToInitInSearch.map((name) => ({ name, resumes: [] }))
+                );
+            }
+            return;
+          };
+          initSkills(skillsToInitInSearch).then(() => {
+            db.collection('skill_assoc')
+              .updateMany(
+                { name: { $in: skillsToRemove } },
+                { $pull: { resumes: oldResume._id } }
               )
               .then(() => {
-                getResumeSkillsByUserID(userID, db, res);
+                db.collection('skill_assoc')
+                  .updateMany(
+                    {
+                      name: {
+                        $in: skillsToAdd,
+                      },
+                    },
+                    {
+                      $push: {
+                        resumes: oldResume._id,
+                      },
+                    }
+                  )
+                  .then(() => {
+                    db.collection('resumes')
+                      .updateOne(
+                        { employee: userID },
+                        {
+                          $set: { skills },
+                        }
+                      )
+                      .then(() => {
+                        getResumeSkillsByUserID(userID, db, res);
+                      });
+                  });
               });
-            });
+          });
         });
-      });
     });
-  });
 }
 
 // Handle user login
@@ -410,14 +441,19 @@ function updateProfile(userID, details, db, res) {
 function resumeSearch(searchString, db, res) {
   const validation = validateSearchQuery(searchString);
   if (!validation.good) {
-    console.log(`Search validation errors: ${validation.issues.join(", ")}`);
+    console.log(`Search validation errors: ${validation.issues.join(', ')}`);
     res.json([]);
     return;
   }
-  
+
   // Parsing for return object
-  const searchTerms = searchString.toLowerCase().split(/[\|\*&!\(\)]+/).map(term => term.trim());
-  const trimmedSearchTermsSet = new Set(searchTerms.filter((term, index) => term || index == searchTerms.length - 1));
+  const searchTerms = searchString
+    .toLowerCase()
+    .split(/[\|\*&!\(\)]+/)
+    .map((term) => term.trim());
+  const trimmedSearchTermsSet = new Set(
+    searchTerms.filter((term, index) => term || index == searchTerms.length - 1)
+  );
 
   // Function responsible for generating the employee return obj
   const resumeLookup = (resID) =>
@@ -430,7 +466,13 @@ function resumeSearch(searchString, db, res) {
           returnObj = {
             _id: (resume && resume._id) || false,
             type: (resume && resume.type) || false,
-            skills: (resume && resume.skills && resume.skills.filter(skill => trimmedSearchTermsSet.has(skill)).sort()) || [],
+            skills:
+              (resume &&
+                resume.skills &&
+                resume.skills
+                  .filter((skill) => trimmedSearchTermsSet.has(skill))
+                  .sort()) ||
+              [],
             employee: (resume && resume.employee) || false,
             employeeID: (resume && resume.employee) || false,
           };
@@ -457,18 +499,28 @@ function resumeSearch(searchString, db, res) {
     });
 
   search.search(searchString).then((resumeIDSet) => {
-    const resumeGetPromises = resumeIDSet.status == 0 ?
-                              [...resumeIDSet.payload].map((id) =>
-                                db.collection('resumes').findOne({ _id: new mongo_client.ObjectId(id) })
-                              ) :
-                              new Array;
+    const resumeGetPromises =
+      resumeIDSet.status == 0
+        ? [...resumeIDSet.payload].map((id) =>
+            db
+              .collection('resumes')
+              .findOne({ _id: new mongo_client.ObjectId(id) })
+          )
+        : new Array();
     // Generate employee return objs
     Promise.all(resumeGetPromises).then((resumes) => {
       resumePromises = resumes.map((resume) => resumeLookup(resume._id));
 
       // Upon all promises resolving, send the return objs
       Promise.all(resumePromises).then((resumesObjs) => {
-        res.json({status: resumeIDSet.status, message: (resumeIDSet.status == 0 ? `Search completed. Total results: ${resumesObjs.length}` : resumeIDSet.message.split("ERROR: ")[1]), resumes: resumesObjs});
+        res.json({
+          status: resumeIDSet.status,
+          message:
+            resumeIDSet.status == 0
+              ? `Search completed. Total results: ${resumesObjs.length}`
+              : resumeIDSet.message.split('ERROR: ')[1],
+          resumes: resumesObjs,
+        });
       });
     });
   });
@@ -480,46 +532,64 @@ function generateReport(searchString, db, res) {
   const response = {
     employeeCount: 0,
     error: false,
-    message: "",
+    message: '',
     strictMatchCount: 0,
     looseMatchCount: 0,
     individualSkillMatches: {},
-  }
+  };
 
   if (!validation.good) {
-    console.log(`Search validation errors: ${validation.issues.join(", ")}`);
-    response.message = `Search validation errors: ${validation.issues.join(", ")}`;
+    console.log(`Search validation errors: ${validation.issues.join(', ')}`);
+    response.message = `Search validation errors: ${validation.issues.join(
+      ', '
+    )}`;
     response.error = true;
     res.json(response);
     return;
   }
 
-  const searchTerms = searchString.toLowerCase().split(/[\|\*&!\(\)]+/).map(term => term.trim());
-  const trimmedSearchTerms = searchTerms.filter((term, index) => term || index == searchTerms.length - 1);
-  const looseSearchString = trimmedSearchTerms.join(" | ");
+  const searchTerms = searchString
+    .toLowerCase()
+    .split(/[\|\*&!\(\)]+/)
+    .map((term) => term.trim());
+  const trimmedSearchTerms = searchTerms.filter(
+    (term, index) => term || index == searchTerms.length - 1
+  );
+  const looseSearchString = trimmedSearchTerms.join(' | ');
   // if (!validation.good) {
   //   console.log(`Search validation errors: ${validation.issues.join(", ")}`);
   //   res.json([]);
   //   return;
   // }
-  const searchPromises = [...new Set(trimmedSearchTerms)].map(skill => search.search(skill).then(resumeIDSet => {
-    if (resumeIDSet.status != -1) {
-      response.individualSkillMatches[skill] = resumeIDSet.payload.size;
-    }
-  }));
-  searchPromises.push(db.collection('resumes').countDocuments({}).then(resumeCount => {
-    response.employeeCount = resumeCount || 0;
-  }));
-  searchPromises.push(search.search(searchString).then(resumeIDSet => {
-    if (resumeIDSet.status != -1) {
-      response.strictMatchCount = resumeIDSet.payload.size;
-    }
-  }));
-  searchPromises.push(search.search(looseSearchString).then(resumeIDSet => {
-    if (resumeIDSet.status != -1) {
-      response.looseMatchCount = resumeIDSet.payload.size;
-    }
-  }));
+  const searchPromises = [...new Set(trimmedSearchTerms)].map((skill) =>
+    search.search(skill).then((resumeIDSet) => {
+      if (resumeIDSet.status != -1) {
+        response.individualSkillMatches[skill] = resumeIDSet.payload.size;
+      }
+    })
+  );
+  searchPromises.push(
+    db
+      .collection('resumes')
+      .countDocuments({})
+      .then((resumeCount) => {
+        response.employeeCount = resumeCount || 0;
+      })
+  );
+  searchPromises.push(
+    search.search(searchString).then((resumeIDSet) => {
+      if (resumeIDSet.status != -1) {
+        response.strictMatchCount = resumeIDSet.payload.size;
+      }
+    })
+  );
+  searchPromises.push(
+    search.search(looseSearchString).then((resumeIDSet) => {
+      if (resumeIDSet.status != -1) {
+        response.looseMatchCount = resumeIDSet.payload.size;
+      }
+    })
+  );
   Promise.all(searchPromises).then(() => res.json(response));
 
   // db.collection('resumes').countDocuments({}).then(resumeCount => {

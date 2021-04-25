@@ -157,6 +157,7 @@ def systemPrep():
     Optional function to collect necesary nltk libraries for this project
     '''
     nltk.data.path.append(f'{os.getcwd()}/env/nltk_data')
+    nltk.download('stopwords')
     nltk.download('punkt')
     nltk.download('averaged_perceptron_tagger')
     nltk.download('maxent_ne_chunker')
