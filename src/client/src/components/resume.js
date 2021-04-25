@@ -5,6 +5,9 @@ import PageBody from './shared/pagebody.js';
 import {
   Button,
   IconButton,
+  Dialog,
+  DialogContent,
+  Box,
   Card,
   Typography,
   Grid,
@@ -23,6 +26,9 @@ import CancelIcon from '@material-ui/icons/Cancel';
 import SaveIcon from '@material-ui/icons/Save';
 import AddIcon from '@material-ui/icons/Add';
 import MuiAlert from '@material-ui/lab/Alert';
+import CloseIcon from '@material-ui/icons/Close';
+
+import DocViewer, { DocViewerRenderers } from 'react-doc-viewer';
 
 const styles = (theme) => ({
   resumeUploadCard: {
@@ -49,6 +55,8 @@ class Resume extends Component {
       editedSkills: undefined,
       openSnackBar: false,
       typeSnackBar: 'loading',
+      resumeDialogOpen: false,
+      resumeDialogTarget: '',
     };
   }
 
@@ -65,6 +73,20 @@ class Resume extends Component {
         }
       });
   }
+
+  openResumeDialog = (employeeID) => {
+    this.setState({
+      resumeDialogOpen: true,
+      resumeDialogTarget: employeeID,
+    });
+  };
+
+  closeResumeDialog = () => {
+    this.setState({
+      resumeDialogOpen: false,
+      resumeDialogTarget: '',
+    });
+  };
 
   setResume(file) {
     if (file !== undefined) {
@@ -316,13 +338,22 @@ class Resume extends Component {
               onChange={(files) => this.setResume(files[0])}
             />
             <br />
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => this.uploadResume()}
-            >
-              Submit resume
-            </Button>
+            <Grid container justify="space-between">
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => this.uploadResume()}
+              >
+                Submit resume
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => this.openResumeDialog(userID)}
+              >
+                View your resume
+              </Button>
+            </Grid>
           </Card>
         </PageBody>
         <Grow in={this.state.openSnackBar === true}>
@@ -355,6 +386,41 @@ class Resume extends Component {
             </MuiAlert>
           </Snackbar>
         </Grow>
+
+        <Dialog
+          open={this.state.resumeDialogOpen}
+          onClose={this.closeResumeDialog}
+          aria-labelledby="resume-fileview-dialog"
+          fullScreen
+        >
+          <DialogContent>
+            <Box textAlign="right">
+              <IconButton onClick={this.closeResumeDialog}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+            <DocViewer
+              style={{ minHeight: '100vh' }}
+              config={{
+                header: {
+                  disableHeader: true,
+                },
+              }}
+              pluginRenderers={DocViewerRenderers}
+              documents={[
+                {
+                  uri: `http://${
+                    window.location.hostname === 'localhost'
+                      ? 'ec2-54-91-125-216.compute-1.amazonaws.com'
+                      : window.location.hostname
+                  }/api/resume-download?employee=${
+                    this.state.resumeDialogTarget
+                  }`,
+                },
+              ]}
+            />
+          </DialogContent>
+        </Dialog>
       </>
     );
   }

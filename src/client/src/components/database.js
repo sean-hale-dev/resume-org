@@ -82,8 +82,6 @@ class Database extends Component {
   }
 
   openResumeDialog = (employeeID) => {
-    console.log(employeeID);
-    console.log(window.location.hostname);
     this.setState({
       resumeDialogOpen: true,
       resumeDialogTarget: employeeID,
