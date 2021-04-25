@@ -23,8 +23,8 @@ class App extends Component {
     super(props);
     this.state = {
       clientPermissions: props.cookies.get('clientPermissions') || {},
-    }
     // Tracking variable for the userID associated with current client permissions
+    };
     this.clientPermissionUserID = props.cookies.get('userID');
   }
 
@@ -44,7 +44,6 @@ class App extends Component {
       this.setState({clientPermissions: res.data}, () => {
         this.updatingPermissions = false;
       });
-    });
   }
 
   render() {
@@ -54,7 +53,7 @@ class App extends Component {
 
     // Update client permissions on cookie update
     let shouldRedirect = true;
-    if (userID != this.clientPermissionUserID) {
+    if (userID !== this.clientPermissionUserID) {
       this.updatingPermissions = true;
       this.clientPermissionUserID = userID;
       this.updatePermissions();
@@ -70,73 +69,92 @@ class App extends Component {
             <Route exact path="/">
               <Redirect to={userID ? '/resume' : '/login'} />
             </Route>
-            {shouldRedirect && clientPermissions["/resume"] === false ? 
-              <Route
-                exact
-                path="/resume"
-              >
+            {shouldRedirect && clientPermissions['/resume'] === false ? (
+              <Route exact path="/resume">
                 <Redirect to="/login" />
               </Route>
-            :
+            ) : (
               <Route
                 exact
                 path="/resume"
-                render={(props) => <Resume {...props} userID={userID} clientPermissions={clientPermissions}/>}
+                render={(props) => (
+                  <Resume
+                    {...props}
+                    userID={userID}
+                    clientPermissions={clientPermissions}
+                  />
+                )}
               />
-            }
-            {shouldRedirect && clientPermissions["/database"] === false ? 
-              <Route
-                exact
-                path="/database"
-              >
+            )}
+            {shouldRedirect && clientPermissions['/database'] === false ? (
+              <Route exact path="/database">
                 <Redirect to="/login" />
               </Route>
-            :
+            ) : (
               <Route
                 exact
                 path="/database"
                 render={(props) => <Database {...props} userID={userID} clientPermissions={clientPermissions} history={history}/>}
               />
-            }
-            {shouldRedirect && clientPermissions["/reports"] === false ? 
-              <Route
-                exact
-                path="/reports"
-              >
+            )}
+            {shouldRedirect && clientPermissions['/reports'] === false ? (
+              <Route exact path="/reports">
                 <Redirect to="/login" />
               </Route>
-            :
+            ) : (
               <Route
                 exact
                 path="/reports"
                 render={(props) => <Reports {...props} userID={userID} clientPermissions={clientPermissions} history={history}/>}
               />
-            }
+            )}
             <Route
               exact
               path="/login"
               render={(props) => (
-                <Login {...props} userID={userID} cookies={cookies} clientPermissions={clientPermissions}/>
+                <Login
+                  {...props}
+                  userID={userID}
+                  cookies={cookies}
+                  clientPermissions={clientPermissions}
+                />
               )}
             />
-            {shouldRedirect && clientPermissions["/profile"] === false ? 
+            {shouldRedirect && clientPermissions['/profile'] === false ? (
               <Route exact path="/profile">
                 <Redirect to="/login" />
               </Route>
-            :
+            ) : (
               <Route
                 exact
                 path="/profile"
-                render={(props) => <Profile {...props} userID={userID} clientPermissions={clientPermissions}/>}
+                render={(props) => (
+                  <Profile
+                    {...props}
+                    userID={userID}
+                    clientPermissions={clientPermissions}
+                  />
+                )}
               />
-            }
-            {shouldRedirect && clientPermissions["/admin"] === false ? 
+            )}
+            {shouldRedirect && clientPermissions['/admin'] === false ? (
               <Route exact path="/admin">
                 <Redirect to="/login" />
               </Route>
-            :
-              <Route exact path="/admin" render={props => <Admin {...props} userID={userID} cookies={cookies} clientPermissions={clientPermissions}/>} />
-            }
+            ) : (
+              <Route
+                exact
+                path="/admin"
+                render={(props) => (
+                  <Admin
+                    {...props}
+                    userID={userID}
+                    cookies={cookies}
+                    clientPermissions={clientPermissions}
+                  />
+                )}
+              />
+            )}
           </Switch>
         </Router>
       </ThemeProvider>

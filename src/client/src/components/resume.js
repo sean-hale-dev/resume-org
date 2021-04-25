@@ -5,9 +5,6 @@ import PageBody from './shared/pagebody.js';
 import {
   Button,
   IconButton,
-  Dialog,
-  DialogContent,
-  Box,
   Card,
   Typography,
   Grid,
@@ -26,9 +23,7 @@ import CancelIcon from '@material-ui/icons/Cancel';
 import SaveIcon from '@material-ui/icons/Save';
 import AddIcon from '@material-ui/icons/Add';
 import MuiAlert from '@material-ui/lab/Alert';
-import CloseIcon from '@material-ui/icons/Close';
-
-import DocViewer, { DocViewerRenderers } from 'react-doc-viewer';
+import { ResumeDisplay } from './shared/ResumeDisplay';
 
 const styles = (theme) => ({
   resumeUploadCard: {
@@ -123,7 +118,6 @@ class Resume extends Component {
    * Handle resume upload
    */
   uploadResume() {
-    const {userID} = this.props;
     if (this.state.resumeFile !== undefined) {
       console.log(
         'Upload Success- Will post the file: ',
@@ -270,7 +264,11 @@ class Resume extends Component {
 
     return (
       <>
-        <Header selectedPage="Your Resume" userID={userID} clientPermissions={clientPermissions} />
+        <Header
+          selectedPage="Your Resume"
+          userID={userID}
+          clientPermissions={clientPermissions}
+        />
         <PageBody>
           {skills && skills.length > 0 && (
             <Card>
@@ -426,40 +424,11 @@ class Resume extends Component {
           </Snackbar>
         </Grow>
 
-        <Dialog
+        <ResumeDisplay
           open={this.state.resumeDialogOpen}
-          onClose={this.closeResumeDialog}
-          aria-labelledby="resume-fileview-dialog"
-          fullScreen
-        >
-          <DialogContent>
-            <Box textAlign="right">
-              <IconButton onClick={this.closeResumeDialog}>
-                <CloseIcon />
-              </IconButton>
-            </Box>
-            <DocViewer
-              style={{ minHeight: '100vh' }}
-              config={{
-                header: {
-                  disableHeader: true,
-                },
-              }}
-              pluginRenderers={DocViewerRenderers}
-              documents={[
-                {
-                  uri: `http://${
-                    window.location.hostname === 'localhost'
-                      ? 'ec2-54-91-125-216.compute-1.amazonaws.com'
-                      : window.location.hostname
-                  }/api/resume-download?employee=${
-                    this.state.resumeDialogTarget
-                  }`,
-                },
-              ]}
-            />
-          </DialogContent>
-        </Dialog>
+          toClose={this.closeResumeDialog}
+          target={this.state.resumeDialogTarget}
+        />
       </>
     );
   }
