@@ -157,6 +157,7 @@ class Reports extends Component {
                     }
                     {Object.entries(result.individualSkillMatches).length > 1 && 
                     result.looseMatchCount !== undefined &&
+                    result.strictMatchCount !== result.looseMatchCount &&
                       <Typography>
                         {result.looseMatchCount}{' '}
                         {result.looseMatchCount === 1 ? 'has' : 'have'} at least
