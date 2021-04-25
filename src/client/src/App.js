@@ -23,7 +23,7 @@ class App extends Component {
     super(props);
     this.state = {
       clientPermissions: props.cookies.get('clientPermissions') || {},
-    // Tracking variable for the userID associated with current client permissions
+      // Tracking variable for the userID associated with current client permissions
     };
     this.clientPermissionUserID = props.cookies.get('userID');
   }
@@ -39,10 +39,15 @@ class App extends Component {
     const { cookies } = this.props;
     const userID = cookies.get('userID');
     this.clientPermissionUserID = userID;
-    axios.get(`http://${window.location.hostname}:8080/getClientPermissions?userID=${userID}`).then(res => {
-      cookies.set('clientPermissions', res.data);
-      this.setState({clientPermissions: res.data}, () => {
-        this.updatingPermissions = false;
+    axios
+      .get(
+        `http://${window.location.hostname}:8080/getClientPermissions?userID=${userID}`
+      )
+      .then((res) => {
+        cookies.set('clientPermissions', res.data);
+        this.setState({ clientPermissions: res.data }, () => {
+          this.updatingPermissions = false;
+        });
       });
   }
 
@@ -94,7 +99,14 @@ class App extends Component {
               <Route
                 exact
                 path="/database"
-                render={(props) => <Database {...props} userID={userID} clientPermissions={clientPermissions} history={history}/>}
+                render={(props) => (
+                  <Database
+                    {...props}
+                    userID={userID}
+                    clientPermissions={clientPermissions}
+                    history={history}
+                  />
+                )}
               />
             )}
             {shouldRedirect && clientPermissions['/reports'] === false ? (
@@ -105,7 +117,14 @@ class App extends Component {
               <Route
                 exact
                 path="/reports"
-                render={(props) => <Reports {...props} userID={userID} clientPermissions={clientPermissions} history={history}/>}
+                render={(props) => (
+                  <Reports
+                    {...props}
+                    userID={userID}
+                    clientPermissions={clientPermissions}
+                    history={history}
+                  />
+                )}
               />
             )}
             <Route
