@@ -84,6 +84,7 @@ class Reports extends Component {
         <PageBody>
           <Card>
             <SearchBar
+              userID={userID}
               searchLabelText="Report Query"
               searchButtonText="Generate Report"
               handleSearch={(searchText) => this.handleSearch(searchText)}
