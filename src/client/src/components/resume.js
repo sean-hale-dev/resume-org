@@ -60,13 +60,22 @@ class Resume extends Component {
     };
   }
 
+  /**
+   * Set the "skills" array to be the localized skill names rather than 
+   */
   localizeSkills() {
     const {skills} = this.state;
     axios.post(`http://${window.location.hostname}:8080/api/skill-display-names?assoc=true`, { skillarrays: [skills.map(skill => skill.toLowerCase())] }).then(result => {
-      console.log(result.data);
       const skill_assoc = result.data.display_assoc[0];
       console.log(skill_assoc);
-      this.setState({skills: skill_assoc.map(skill => skill.display_name || skill.name).sort()});
+      const skill_map = {};
+      skill_assoc.forEach(skill => {
+        skill_map[skill.skill] = skill.display_name || skill.skill;
+      });
+      console.log(skill_map);
+      const updatedSkills = skills.map(skill => skill_map[skill.toLowerCase()] || skill).sort();
+      console.log(updatedSkills);
+      this.setState({skills: updatedSkills});
     });
   }
 
@@ -156,7 +165,6 @@ class Resume extends Component {
             openSnackBar: true,
             typeSnackBar: 'success',
           }, () => this.localizeSkills());
-          console.log('skills: ', this.state.skills);
         })
         .catch((err) => {
           this.setState({

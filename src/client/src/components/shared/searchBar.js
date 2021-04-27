@@ -125,7 +125,6 @@ class SearchBar extends Component {
       .then((res) => {
         if (res && Array.isArray(res.data)) {
           const skills = res.data;
-          console.log(skills);
           this.setState(
             { searchOptions: Array.isArray(skills) ? skills.sort((a, b) => stringCompare(a.name, b.name)) : [] },
             () => this.updateSearchOptions()
@@ -170,8 +169,6 @@ class SearchBar extends Component {
       .sort((a, b) => a.name.indexOf(lastTerm) - b.name.indexOf(lastTerm))
       .map(option => (option.display_name && option.display_name.toLowerCase() == option.name) ? option.display_name : option.name);
     
-    console.log("Active options:");
-    console.log(activeOptions);
     this.setState({ activeOptions });
   }
 
@@ -181,7 +178,6 @@ class SearchBar extends Component {
    */
   setSearchText(searchText) {
     const {location, history} = this.props;
-    console.log(`Setting search text to ${searchText}`);
     this.setState({searchText}, () => {
       const search = (new URLSearchParams(location.search));
       search.set("searchText", searchText);

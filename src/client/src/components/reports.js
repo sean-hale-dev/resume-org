@@ -87,43 +87,6 @@ class Reports extends Component {
     this.setState({ openSnackBar: false });
   };
 
-  // render () {
-  //   const { classes, userID } = this.props;
-  //   const { result } = this.state;
-  //   return (<>
-  //     <Header selectedPage="Reports" userID={userID}/>
-  //     <PageBody>
-  //       <Card>
-  //         <SearchBar 
-  //           searchLabelText="Report Query"
-  //           searchButtonText="Generate Report"
-  //           handleSearch={searchText => this.handleSearch(searchText)}
-  //         />
-  //       </Card>
-  //       {result && 
-  //       <Card>
-  //         <Toolbar className={classes.searchToolbar}>
-  //           <Typography className={classes.reportTypography} variant="h5">Report</Typography>
-  //         </Toolbar>
-          
-  //         <div className={classes.reportTypography}>
-  //           {result.error ? 
-  //             <Typography style={{color: red[500]}}>Error generating the report: {result.message}</Typography> 
-  //           : 
-  //           <>
-  //             <Typography>There {result.employeeCount == 1 ? "is" : "are"} {result.employeeCount} employee{result.employeeCount == 1 ? "" : "s"} in the organization. {result.employeeCount == 1 ? "" : "Of those:"}</Typography>
-  //             <Typography>{result.strictMatchCount} strictly match{result.strictMatchCount == 1 ? "es" : ""} the query ({(100.0 * result.strictMatchCount / result.employeeCount).toFixed(2)}% of the organization).</Typography>
-  //             <Typography>{result.looseMatchCount} {result.looseMatchCount == 1 ? "has" : "have"} at least one skill in the query ({(100.0 * result.looseMatchCount / result.employeeCount).toFixed(2)}% of the organization).</Typography>
-  //             {Object.entries(result.individualSkillMatches).map(([skill, count]) => <Typography>{count} {count == 1 ? "has" : "have"} the skill "{result.displayNames[skill]}" ({(100.0 * count / result.employeeCount).toFixed(2)}% of the organization).</Typography>)}
-  //           </>}
-  //         </div>
-  //       </Card>
-  //       }
-  //     </PageBody>
-  //     <Grow in={this.state.openSnackBar == true}>
-  //         <Snackbar anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-  //                   open={this.state.openSnackBar == true}
-  //                   onClose={this.handleSnackbarClose}
   /**
    * Go to the '/database' page with the search defined by newSearchText
    * @param {String} newSearchText 

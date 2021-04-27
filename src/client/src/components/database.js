@@ -136,18 +136,13 @@ class Database extends Component {
         snackBarText: res.data.message,
       });
       
-      var ds = []
-      this.state.searchResults.forEach(sr => {
-        ds.push(sr.matchedSkills);
+      const skillsToFetch = []
+      this.state.searchResults.forEach(searchResult => {
+        skillsToFetch.push(searchResult.matchedSkills);
       });
-      console.log("data:", res.data);
-      console.log("displaySkills:", ds);
-      
       
       //////// getting the display skills
-      axios.post(`http://${window.location.hostname}:8080/api/skill-display-names?assoc=false`, { skillarrays: ds }).then(result => {
-        console.log("result:", result);
-        console.log("result.data.display_assoc:", result.data.display_assoc);
+      axios.post(`http://${window.location.hostname}:8080/api/skill-display-names?assoc=false`, { skillarrays: skillsToFetch }).then(result => {
         
         this.setState({
           searchResults: this.state.searchResults.map((data, index) => ({
@@ -160,14 +155,10 @@ class Database extends Component {
             employeeID: data.employeeID,
           }))
         });
-        console.log(this.state);
       })
       .catch((err) => {
         console.error(err);
       });
-      ////////
-      
-      
     })
     .catch((err) => {
       this.setState({
@@ -177,39 +168,6 @@ class Database extends Component {
       });
       console.error(err);
     });
-    // axios
-    //   .post(`http://${window.location.hostname}:8080/api/resume-search`, {
-    //     queryString: searchText,
-    //     userID,
-    //   })
-    //   .then((res) => {
-    //     this.setState({
-    //       searchResults: res.data.resumes.map((data, index) => ({
-    //         name: data.employee || 'Unknown Employee',
-    //         matchedSkills: data.skills || [],
-    //         position: data.position || 'Unknown Position',
-    //         experience: data.experience || 'Unknown',
-    //         index,
-    //         employeeID: data.employeeID || '',
-    //       })),
-    //       openSnackBar: true,
-    //       typeSnackBar: res.data.status === 0 ? 'success' : 'error',
-    //       snackBarText: res.data.message,
-    //     });
-    //   })
-    //   .catch((err) => {
-    //     this.setState({
-    //       openSnackBar: true,
-    //       typeSnackBar: 'error',
-    //       snackBarText: 'Search failed - the server did not respond.',
-    //     });
-    //     console.error(err);
-    //   })
-    //   .finally(() => {
-    //     setTimeout(() => {
-    //       this.handleSnackbarClose(null, null);
-    //     }, 5000);
-    //   });
   }
 
   handleSnackbarClose = (event, reason) => {
