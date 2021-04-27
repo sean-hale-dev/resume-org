@@ -11,6 +11,7 @@ const mongo_client = require('mongodb');
 // import search from './search.js';
 const search = require('./utils/search.js');
 const { strict } = require('assert');
+const { WSAECONNREFUSED } = require('constants');
 
 // TODO: ADD AUTHENTICATION
 
@@ -211,12 +212,111 @@ mongo_client.connect(
 
     app.get('/getAllSearchableSkills', (req, res) => {
       getAllSearchableSkills(db, res);
-    })
+    });
+    
+    app.get('/skill-display-names', (req, res) => {
+      if(req.query.skill) {
+        getSkillDisplayName(db, res, skill);
+      }
+      else if(req.query.skills) {
+        getSkillDisplayNames(db, res, JSON.parse(req.query.skills).skills);
+      }
+      else {
+        res.send({message: "Error: need to provide a skill or skills."});
+      }
+    });
+    
+    app.post('/skill-display-names', (req, res) => {
+      if(req.body.skill) {
+        // getSkillDisplayName(db, res, skill);
+        console.log("skill:", req.body.skill);
+      }
+      else if(req.body.skills) {
+        // getSkillDisplayNames(db, res, JSON.parse(req.query.skills).skills);
+        console.log("skills:", req.body.skills);
+      }
+      else if(req.body.skillarrays) {
+        console.log("skillarrays:", req.body.skillarrays);
+        getSkillDisplayNameArrays(db, res, req.body.skillarrays);
+      }
+      else {
+        res.send({message: "Error: need to provide a skill or skills."});
+      }
+    });
 
     app.listen(port, () => {
       console.log(`Listening on *:${port}`);
     });
 });
+
+function getSkillDisplayName(db, res, skill) {
+  db.collection('skill_assoc').findOne({name: skill})((err, results) => {
+    if (err) {
+      res.json({ error: err });
+    } else {
+      res.json({ name: skill, display_name: results.display_name }) ;
+    }
+  });
+}
+
+function getSkillDisplayNames(db, res, skills) {
+  db.collection('skill_assoc').find({name: { $in: skills }}).toArray((err, results) => {
+    if (err) {
+      res.json({ error: err });
+    } else {
+      full_skills = results.map(d => { return {
+        name: d.name,
+        display_name: (d.display_name && d.display_name.toLowerCase() == d.name) ? d.display_name : cap(d.name)
+      }});
+      res.json(full_skills) ;
+    }
+  });
+}
+
+function getSkillDisplayNameArrays(db, res, skillarrays) {
+  
+  var all_skills = [];
+  var display_skills = [];
+  
+  skillarrays.forEach(element => {
+    all_skills.push(...element);
+  });
+  console.log("all_skills:", all_skills);
+  
+  
+  db.collection('skill_assoc').find({name: { $in: all_skills }}).toArray((err, results) => {
+    if (err) {
+      res.json({ error: err });
+    } else {
+      full_skills = results.map(d => { return {
+        skill: d.name,
+        display_name: (d.display_name && d.display_name.toLowerCase() == d.name) ? d.display_name : cap(d.name)
+      }});
+      console.log(full_skills);
+      console.log("full_skills:", full_skills);
+      skillarrays.forEach(arr => {
+        var in_arr = [];
+        arr.forEach(element => {
+          in_arr.push({ skill: element, display_name: full_skills.find(x => x.skill == element).display_name });
+        });
+        display_skills.push(in_arr);
+      });
+      console.log("display_skills:", display_skills);
+      res.json({ display_assoc: display_skills});
+    }
+  });
+  
+}
+
+// capitalizes the first letter of every word in a string and then returns it
+// used when a skill doens't have a valid display_name
+function cap(str) {
+  arr = str.split(" ");
+  console.log(arr);
+  arr = arr.map(word => word.substring(0,1).toUpperCase() + word.substring(1).toLowerCase());
+  console.log(arr);
+  return arr.join(" ");
+}
 
 // Get list of all skills for searching
 function getAllSearchableSkills(db, res) {
