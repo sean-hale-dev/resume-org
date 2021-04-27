@@ -114,15 +114,49 @@ class Database extends Component {
         searchResults: res.data.resumes.map((data, index) => ({
           name: data.employee || "Unknown Employee",
           matchedSkills: data.skills || [], 
+          displaySkills: [],
           position: data.position || "Unknown Position",
           experience: data.experience || "Unknown",
           index,
           employeeID: data.employeeID || "",
         })),
         openSnackBar: true,
-          typeSnackBar: res.data.status == 0 ? "success" : "error",
-          snackBarText: res.data.message
+        typeSnackBar: res.data.status == 0 ? "success" : "error",
+        snackBarText: res.data.message,
       });
+      
+      var ds = []
+      this.state.searchResults.forEach(sr => {
+        ds.push(sr.matchedSkills);
+      });
+      console.log("data:", res.data);
+      console.log("displaySkills:", ds);
+      
+      
+      //////// getting the display skills
+      axios.post(`http://${window.location.hostname}:8080/skill-display-names?assoc=false`, { skillarrays: ds }).then(result => {
+        console.log("result:", result);
+        console.log("result.data.display_assoc:", result.data.display_assoc);
+        
+        this.setState({
+          searchResults: this.state.searchResults.map((data, index) => ({
+            name: data.name,
+            matchedSkills: data.matchedSkills, 
+            displaySkills: result.data.display_assoc[index],
+            position: data.position,
+            experience: data.experience,
+            index,
+            employeeID: data.employeeID,
+          }))
+        });
+        console.log(this.state);
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+      ////////
+      
+      
     })
     .catch((err) => {
       this.setState({
@@ -218,7 +252,7 @@ class Database extends Component {
                     <Grid item xs={4}>
                       <Typography>
                         <strong>Skills matched: </strong>
-                        {result.matchedSkills.join(', ')}
+                        {result.displaySkills.join(', ')}
                       </Typography>
                     </Grid>
                     <Grid item xs={3}>
