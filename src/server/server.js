@@ -274,68 +274,17 @@ mongo_client.connect(
         }
       });
     });
-
-    // app.get('/getAllSearchableSkills', (req, res) => {
-    //   getAllSearchableSkills(db, res);
-    // });
     
+    /**
+     * @param {Array<Array<String>>} body.skillarrays Nested arrays representing skills to fetch
+     */
     app.post(endpointPrefix + '/skill-display-names', (req, res) => {
       if(req.body.skillarrays) {
-        // console.log("skillarrays:", req.body.skillarrays);
         getSkillDisplayNameArrays(db, res, req.body.skillarrays, req.query.assoc == "true" ? true : false);
       }
       else {
         res.send({message: "Error: need to provide a skill or skills."});
       }
-    });
-    
-    // tests checking for display names
-    app.post(endpointPrefix + '/test', (req, res) => {
-      if(req.body.skills) {
-        // console.log("skill:", req.body.skill);
-        console.log(req.body.skills);
-        checkForNewDisplayNames(db, req.body.skills).then(display_names => {
-          
-          console.log(display_names);
-        }).catch((err) => {
-          console.log(err);
-        });
-      }
-      res.end();
-    });
-    
-    // tests inserting skills and then checking for display names
-    // intended to mimic part of parseResume()
-    app.post(endpointPrefix + '/test2', (req, res) => {
-      if(req.body.skills) {
-        // console.log("skill:", req.body.skill);
-        console.log(req.body.skills);
-        dbGetKeys(db).then((result) => {
-          console.log('Get keys - promise done:');
-          allCurrentKeys = result.map((doc) => doc.name);
-          console.log(allCurrentKeys);
-          var skills_json = {skills: req.body.skills};
-          insertNewSkills(db, allCurrentKeys, skills_json)
-          .then(function () {
-            console.log(
-              'Insert skills promise resolved - about to update skills'
-            );
-            // checks for display names of new skills and puts a display name for each one in the database
-            checkForNewDisplayNames(db, skills_json.skills).then(display_names => {
-              skills_json.displayNames = display_names;
-              // Send the parsed skills
-              console.log("This is the res.json() for the skills", skills_json);
-              
-            }).catch((err) => {
-              console.log(err);
-              res.json(skills_json);
-            });
-          }).catch((err) => {
-            console.log(err);
-          });
-        });
-      }
-      res.end();
     });
 
     /**
