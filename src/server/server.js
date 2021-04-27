@@ -228,16 +228,16 @@ mongo_client.connect(
     
     app.post('/skill-display-names', (req, res) => {
       if(req.body.skill) {
-        // getSkillDisplayName(db, res, skill);
-        console.log("skill:", req.body.skill);
+        // console.log("skill:", req.body.skill);
+        getSkillDisplayName(db, res, skill);
       }
       else if(req.body.skills) {
-        // getSkillDisplayNames(db, res, JSON.parse(req.query.skills).skills);
-        console.log("skills:", req.body.skills);
+        // console.log("skills:", req.body.skills);
+        getSkillDisplayNames(db, res, JSON.parse(req.query.skills).skills);
       }
       else if(req.body.skillarrays) {
-        console.log("skillarrays:", req.body.skillarrays);
-        getSkillDisplayNameArrays(db, res, req.body.skillarrays);
+        // console.log("skillarrays:", req.body.skillarrays);
+        getSkillDisplayNameArrays(db, res, req.body.skillarrays, req.query.assoc == "true" ? true : false);
       }
       else {
         res.send({message: "Error: need to provide a skill or skills."});
@@ -273,7 +273,35 @@ function getSkillDisplayNames(db, res, skills) {
   });
 }
 
-function getSkillDisplayNameArrays(db, res, skillarrays) {
+/* takes in the database, res for sending back a JSON, the skill arrays from the user,
+   and a boolean (assoc) that tells the function how to format the returned data
+   assoc == true:
+   return {
+            display_assoc: [
+              [
+                {
+                  skill: <the skill name>,
+                  display_name: <the display name>
+                },
+                ...
+              ],
+              ...
+            ]
+          }
+   
+   assoc == false:
+   return a one-to-one array of arrays matching the skillarrays posted, except the 
+   returned array of arrays is filled with display names instead of skills
+   return {
+            display_assoc: [
+              [
+                <1st display name>, <2nd display name>, ...
+              ],
+              ...
+            ]
+          }
+*/
+function getSkillDisplayNameArrays(db, res, skillarrays, assoc) {
   
   var all_skills = [];
   var display_skills = [];
@@ -297,7 +325,9 @@ function getSkillDisplayNameArrays(db, res, skillarrays) {
       skillarrays.forEach(arr => {
         var in_arr = [];
         arr.forEach(element => {
-          in_arr.push({ skill: element, display_name: full_skills.find(x => x.skill == element).display_name });
+          (assoc == true) ?
+          (in_arr.push({ skill: element, display_name: full_skills.find(x => x.skill == element).display_name })) :
+          (in_arr.push(full_skills.find(x => x.skill == element).display_name));
         });
         display_skills.push(in_arr);
       });
