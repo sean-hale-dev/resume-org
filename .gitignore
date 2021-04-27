@@ -8,3 +8,6 @@ src/resumeParser/dist
 *node_modules
 .env
 *vimspector.json
+deploy.sh
+src/client/build
+src/server/resumes
