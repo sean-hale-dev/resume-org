@@ -1,7 +1,4 @@
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Button,
   Card,
   FormControl,
@@ -9,16 +6,13 @@ import {
   InputLabel,
   MenuItem,
   Select,
-  TextField,
   Toolbar,
   Typography,
-  Link,
   Snackbar,
   Grow,
 } from '@material-ui/core';
 import React, { Component } from 'react';
 import Header from './shared/header.js';
-import SearchIcon from '@material-ui/icons/Search';
 import ArrowForwardIcon from '@material-ui/icons/ArrowForward';
 import PageBody from './shared/pagebody.js';
 import { withStyles } from '@material-ui/core/styles';
@@ -26,28 +20,7 @@ import { grey } from '@material-ui/core/colors';
 import axios from 'axios';
 import SearchBar from './shared/searchBar.js';
 import MuiAlert from '@material-ui/lab/Alert';
-
-
-const DUMMY_DATA = [
-  {
-    name: 'Emma Example',
-    position: 'Software Engineer',
-    experience: 10,
-    matchedSkills: ['Angular', 'JavaScript'],
-  },
-  {
-    name: 'Samuel Sample',
-    position: 'Web Developer',
-    experience: 8,
-    matchedSkills: ['React', 'JavaScript'],
-  },
-  {
-    name: 'Timothy Test',
-    position: 'Junior Web Developer',
-    experience: 3,
-    matchedSkills: ['Angular', 'React', 'JavaScript'],
-  },
-];
+import { ResumeDisplay } from './shared/ResumeDisplay';
 
 const styles = (theme) => ({
   searchField: {
@@ -81,35 +54,73 @@ const styles = (theme) => ({
   },
 });
 
+/**
+ * Compare two strings
+ * @param {String} a 
+ * @param {String} b 
+ * @returns 1 if a > b, -1 if a < 0, 0 if a == b
+ */
 const stringCompare = (a, b) => {
   if (a < b) return -1;
   if (a > b) return 1;
   return 0;
-}
+};
 
+/**
+ * Props:
+ * @param {String} userID userID string
+ * @param {Object} clientPermissions Object containing list of links that client has access to
+ * @param {*} location React Router location
+ * @param {*} history "history" library object
+ */
 class Database extends Component {
   constructor(props) {
     super(props);
-    // TODO: Implement Search Function
     this.state = {
       searchResults: [],
-      // searchText: "",
       openSnackBar: false,
-      typeSnackBar: "",
-      snackBarText: ""
+      typeSnackBar: '',
+      snackBarText: '',
+      resumeDialogOpen: false,
+      resumeDialogTarget: '',
     };
     this.handleSearch.bind(this);
   }
 
+  /**
+   * View an employee's resume
+   * @param {String} employeeID 
+   */
+  openResumeDialog = (employeeID) => {
+    this.setState({
+      resumeDialogOpen: true,
+      resumeDialogTarget: employeeID,
+    });
+  };
+
+  /**
+   * Stop viewing a resume
+   */
+  closeResumeDialog = () => {
+    this.setState({
+      resumeDialogOpen: false,
+      resumeDialogTarget: '',
+    });
+  };
+
+  /**
+   * Search for a string!
+   * @param {String} searchText 
+   */
   handleSearch(searchText) {
-    // const { searchText } = this.state;
+    const {userID} = this.props;
     console.log(`Searching for ${searchText}`);
     this.setState({
-        openSnackBar: true,
-        typeSnackBar: "searching",
-        snackBarText: "Searching..."
+      openSnackBar: true,
+      typeSnackBar: 'searching',
+      snackBarText: 'Searching...',
     });
-    axios.post(`http://${window.location.hostname}:8080/resume-search`, {queryString: searchText}).then(res => {
+    axios.post(`http://${window.location.hostname}:8080/api/resume-search`, {queryString: searchText, userID}).then(res => {
       this.setState({
         searchResults: res.data.resumes.map((data, index) => ({
           name: data.employee || "Unknown Employee",
@@ -134,7 +145,7 @@ class Database extends Component {
       
       
       //////// getting the display skills
-      axios.post(`http://${window.location.hostname}:8080/skill-display-names?assoc=false`, { skillarrays: ds }).then(result => {
+      axios.post(`http://${window.location.hostname}:8080/api/skill-display-names?assoc=false`, { skillarrays: ds }).then(result => {
         console.log("result:", result);
         console.log("result.data.display_assoc:", result.data.display_assoc);
         
@@ -166,60 +177,96 @@ class Database extends Component {
       });
       console.error(err);
     });
+    // axios
+    //   .post(`http://${window.location.hostname}:8080/api/resume-search`, {
+    //     queryString: searchText,
+    //     userID,
+    //   })
+    //   .then((res) => {
+    //     this.setState({
+    //       searchResults: res.data.resumes.map((data, index) => ({
+    //         name: data.employee || 'Unknown Employee',
+    //         matchedSkills: data.skills || [],
+    //         position: data.position || 'Unknown Position',
+    //         experience: data.experience || 'Unknown',
+    //         index,
+    //         employeeID: data.employeeID || '',
+    //       })),
+    //       openSnackBar: true,
+    //       typeSnackBar: res.data.status === 0 ? 'success' : 'error',
+    //       snackBarText: res.data.message,
+    //     });
+    //   })
+    //   .catch((err) => {
+    //     this.setState({
+    //       openSnackBar: true,
+    //       typeSnackBar: 'error',
+    //       snackBarText: 'Search failed - the server did not respond.',
+    //     });
+    //     console.error(err);
+    //   })
+    //   .finally(() => {
+    //     setTimeout(() => {
+    //       this.handleSnackbarClose(null, null);
+    //     }, 5000);
+    //   });
   }
 
   handleSnackbarClose = (event, reason) => {
-    if(reason == "clickaway") return;
+    if (reason === 'clickaway') return;
     this.setState({ openSnackBar: false });
   };
 
-  handleSortSelect(selectedSort) {
-
-  }
-
   render() {
-    const { classes, userID } = this.props;
-    const { searchResults, searchText } = this.state;
+    const { classes, userID, clientPermissions, location, history } = this.props;
+    const { searchResults } = this.state;
     const sortOptions = {
-      "----": () => {
+      '----': () => {
         searchResults.sort((a, b) => a.index - b.index);
-        this.setState({searchResults});
+        this.setState({ searchResults });
       },
-      "Name (A-Z)": () => {
+      'Name (A-Z)': () => {
         searchResults.sort((a, b) => stringCompare(a.name, b.name));
-        this.setState({searchResults});
+        this.setState({ searchResults });
       },
-      "Position (A-Z)": () => {
+      'Position (A-Z)': () => {
         searchResults.sort((a, b) => stringCompare(a.position, b.position));
-        this.setState({searchResults});
+        this.setState({ searchResults });
       },
-      "Most Experience": () => {
+      'Most Experience': () => {
         searchResults.sort((a, b) => (b.experience || 0) - (a.experience || 0));
-        this.setState({searchResults});
+        this.setState({ searchResults });
       },
-      "Most Skills Matched": () => {
-        searchResults.sort((a, b) => b.matchedSkills.length - a.matchedSkills.length);
-        this.setState({searchResults});
+      'Most Skills Matched': () => {
+        searchResults.sort(
+          (a, b) => b.matchedSkills.length - a.matchedSkills.length
+        );
+        this.setState({ searchResults });
       },
-      "Least Experience": () => {
+      'Least Experience': () => {
         searchResults.sort((a, b) => (a.experience || 0) - (b.experience || 0));
-        this.setState({searchResults});
+        this.setState({ searchResults });
       },
-      "Least Skills Matched": () => {
-        searchResults.sort((a, b) => a.matchedSkills.length - b.matchedSkills.length);
-        this.setState({searchResults});
+      'Least Skills Matched': () => {
+        searchResults.sort(
+          (a, b) => a.matchedSkills.length - b.matchedSkills.length
+        );
+        this.setState({ searchResults });
       },
-    }
+    };
 
     return (
       <>
-        <Header selectedPage="Resume Database" userID={userID}/>
+        <Header selectedPage="Resume Database" userID={userID}  clientPermissions={clientPermissions}/>
         <PageBody>
           <Card>
-            <SearchBar 
+            <SearchBar
+              userID={userID}
               searchLabelText="Search Resumes"
               searchButtonText="Search"
-              handleSearch={searchText => this.handleSearch(searchText)}
+              handleSearch={(searchText) => this.handleSearch(searchText)}
+              location={location}
+              history={history}
             />
           </Card>
           <Card className={classes.resultsCard}>
@@ -232,8 +279,14 @@ class Database extends Component {
               <Grid item xs={4}>
                 <FormControl className={classes.resultsSortBy}>
                   <InputLabel id="results-sort-label">Sort by:</InputLabel>
-                  <Select labelId="results-sort-label" id="results-sort" onChange={event => sortOptions[event.target.value]()}>
-                    {Object.keys(sortOptions).map(sortOption => <MenuItem value={sortOption}>{sortOption}</MenuItem>)}
+                  <Select
+                    labelId="results-sort-label"
+                    id="results-sort"
+                    onChange={(event) => sortOptions[event.target.value]()}
+                  >
+                    {Object.keys(sortOptions).map((sortOption) => (
+                      <MenuItem value={sortOption}>{sortOption}</MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
@@ -246,7 +299,7 @@ class Database extends Component {
                       <Typography variant="h5">{result.name}</Typography>
                       <Typography>
                         {result.position}, {result.experience} year
-                        {result.experience == 1 ? '' : 's'}
+                        {result.experience === 1 ? '' : 's'}
                       </Typography>
                     </Grid>
                     <Grid item xs={4}>
@@ -257,12 +310,15 @@ class Database extends Component {
                     </Grid>
                     <Grid item xs={3}>
                       <Toolbar className={classes.viewResumeContainer}>
-                        <Link href={result.employeeID ? `http://${window.location.hostname}:8080/resume-download?employee=${result.employeeID}` : ""} color="inherit">
-                          <Button disabled={!result.employeeID}>
-                            View Resume
-                            <ArrowForwardIcon />
-                          </Button>
-                        </Link>
+                        <Button
+                          onClick={() => {
+                            this.openResumeDialog(result.employeeID);
+                          }}
+                          value={result.employeeID}
+                        >
+                          View Resume
+                          <ArrowForwardIcon />
+                        </Button>
                       </Toolbar>
                     </Grid>
                   </Grid>
@@ -271,25 +327,38 @@ class Database extends Component {
             ))}
           </Card>
         </PageBody>
-        <Grow in={this.state.openSnackBar == true}>
-          <Snackbar anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-                    open={this.state.openSnackBar == true}
-                    onClose={this.handleSnackbarClose}
+        <Grow in={this.state.openSnackBar === true}>
+          <Snackbar
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            open={this.state.openSnackBar === true}
+            onClose={this.handleSnackbarClose}
           >
-            <MuiAlert elevation={6}
-                      variant="filled"
-                      onClose={this.handleSnackbarClose}
-                      severity={this.state.typeSnackBar == "searching" ? "info" :
-                                (this.state.typeSnackBar == "error" ? "error" :
-                                (this.state.typeSnackBar == "success" ? "success" : ""))}>
+            <MuiAlert
+              elevation={6}
+              variant="filled"
+              onClose={this.handleSnackbarClose}
+              severity={
+                this.state.typeSnackBar === 'searching'
+                  ? 'info'
+                  : this.state.typeSnackBar === 'error'
+                  ? 'error'
+                  : this.state.typeSnackBar === 'success'
+                  ? 'success'
+                  : ''
+              }
+            >
               {this.state.snackBarText}
             </MuiAlert>
           </Snackbar>
         </Grow>
+        <ResumeDisplay
+          open={this.state.resumeDialogOpen}
+          toClose={this.closeResumeDialog}
+          target={this.state.resumeDialogTarget}
+        />
       </>
     );
   }
 }
 
 export default withStyles(styles)(Database);
-

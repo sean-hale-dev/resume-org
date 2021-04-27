@@ -4,13 +4,13 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { CookiesProvider } from 'react-cookie';
-
-// console.log("Index?");
+import { createBrowserHistory } from "history";
+const customHistory = createBrowserHistory();
 
 ReactDOM.render(
   <React.StrictMode>
     <CookiesProvider>
-      <App /> 
+      <App history={customHistory}/> 
     </CookiesProvider>
   </React.StrictMode>,
   document.getElementById('root')

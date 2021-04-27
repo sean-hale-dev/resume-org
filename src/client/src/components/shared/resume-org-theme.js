@@ -1,13 +1,13 @@
-import { blue, orange, grey } from '@material-ui/core/colors';
+import { orange, grey } from '@material-ui/core/colors';
 import { createMuiTheme } from '@material-ui/core/styles';
 
 const resume_org_theme = createMuiTheme({
   palette: {
     primary: {
-      main: "#ee2f3b",
+      main: '#ee2f3b',
     },
     secondary: {
-      main: orange["A700"],
+      main: orange['A700'],
     },
   },
   overrides: {
@@ -21,10 +21,11 @@ const resume_org_theme = createMuiTheme({
     },
     MuiCard: {
       root: {
-        margin: "15px",
+        margin: '15px',
       },
     },
   },
 });
 
 export default resume_org_theme;
+
