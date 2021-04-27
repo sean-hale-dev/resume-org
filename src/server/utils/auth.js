@@ -33,6 +33,7 @@ const MIN_SERVER_PERMISSIONS = {
   "/adminGetProfiles": PERMISSION_LEVELS["Admin"],
   "/adminUpdateProfile": PERMISSION_LEVELS["Admin"],
   "/adminDeleteProfile": PERMISSION_LEVELS["Admin"],
+  "/skill-display-names": PERMISSION_LEVELS["Employee"],
 }
 
 /**

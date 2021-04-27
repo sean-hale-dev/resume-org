@@ -120,39 +120,54 @@ class Database extends Component {
       typeSnackBar: 'searching',
       snackBarText: 'Searching...',
     });
-    axios
-      .post(`http://${window.location.hostname}:8080/api/resume-search`, {
-        queryString: searchText,
-        userID,
-      })
-      .then((res) => {
+    axios.post(`http://${window.location.hostname}:8080/api/resume-search`, {queryString: searchText, userID}).then(res => {
+      this.setState({
+        searchResults: res.data.resumes.map((data, index) => ({
+          name: data.employee || "Unknown Employee",
+          matchedSkills: data.skills || [], 
+          displaySkills: [],
+          position: data.position || "Unknown Position",
+          experience: data.experience || "Unknown",
+          index,
+          employeeID: data.employeeID || "",
+        })),
+        openSnackBar: true,
+        typeSnackBar: res.data.status == 0 ? "success" : "error",
+        snackBarText: res.data.message,
+      });
+      
+      const skillsToFetch = []
+      this.state.searchResults.forEach(searchResult => {
+        skillsToFetch.push(searchResult.matchedSkills);
+      });
+      
+      //////// getting the display skills
+      axios.post(`http://${window.location.hostname}:8080/api/skill-display-names?assoc=false`, { skillarrays: skillsToFetch }).then(result => {
+        
         this.setState({
-          searchResults: res.data.resumes.map((data, index) => ({
-            name: data.employee || 'Unknown Employee',
-            matchedSkills: data.skills || [],
-            position: data.position || 'Unknown Position',
-            experience: data.experience || 'Unknown',
+          searchResults: this.state.searchResults.map((data, index) => ({
+            name: data.name,
+            matchedSkills: data.matchedSkills, 
+            displaySkills: result.data.display_assoc[index],
+            position: data.position,
+            experience: data.experience,
             index,
-            employeeID: data.employeeID || '',
-          })),
-          openSnackBar: true,
-          typeSnackBar: res.data.status === 0 ? 'success' : 'error',
-          snackBarText: res.data.message,
+            employeeID: data.employeeID,
+          }))
         });
       })
       .catch((err) => {
-        this.setState({
-          openSnackBar: true,
-          typeSnackBar: 'error',
-          snackBarText: 'Search failed - the server did not respond.',
-        });
         console.error(err);
-      })
-      .finally(() => {
-        setTimeout(() => {
-          this.handleSnackbarClose(null, null);
-        }, 5000);
       });
+    })
+    .catch((err) => {
+      this.setState({
+        openSnackBar: true,
+        typeSnackBar: "error",
+        snackBarText: "Search failed - the server did not respond."
+      });
+      console.error(err);
+    });
   }
 
   handleSnackbarClose = (event, reason) => {
@@ -248,7 +263,7 @@ class Database extends Component {
                     <Grid item xs={4}>
                       <Typography>
                         <strong>Skills matched: </strong>
-                        {result.matchedSkills.join(', ')}
+                        {result.displaySkills.join(', ')}
                       </Typography>
                     </Grid>
                     <Grid item xs={3}>

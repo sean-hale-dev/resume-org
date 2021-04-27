@@ -41,7 +41,7 @@ class App extends Component {
     this.clientPermissionUserID = userID;
     axios
       .get(
-        `http://${window.location.hostname}:8080/getClientPermissions?userID=${userID}`
+        `http://${window.location.hostname}:8080/api/getClientPermissions?userID=${userID}`
       )
       .then((res) => {
         cookies.set('clientPermissions', res.data);

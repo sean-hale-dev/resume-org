@@ -196,7 +196,7 @@ class Reports extends Component {
                       ([skill, count]) => (
                         <Typography>
                           {count} {count === 1 ? 'has' : 'have'} the skill "
-                          {skill}" (
+                          {result.displayNames[skill]}" (
                           {((100.0 * count) / result.employeeCount).toFixed(2)}%
                           of the organization).
                           <Button

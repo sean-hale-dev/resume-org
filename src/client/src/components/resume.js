@@ -60,6 +60,25 @@ class Resume extends Component {
     };
   }
 
+  /**
+   * Set the "skills" array to be the localized skill names rather than 
+   */
+  localizeSkills() {
+    const {skills} = this.state;
+    axios.post(`http://${window.location.hostname}:8080/api/skill-display-names?assoc=true`, { skillarrays: [skills.map(skill => skill.toLowerCase())] }).then(result => {
+      const skill_assoc = result.data.display_assoc[0];
+      console.log(skill_assoc);
+      const skill_map = {};
+      skill_assoc.forEach(skill => {
+        skill_map[skill.skill] = skill.display_name || skill.skill;
+      });
+      console.log(skill_map);
+      const updatedSkills = skills.map(skill => skill_map[skill.toLowerCase()] || skill).sort();
+      console.log(updatedSkills);
+      this.setState({skills: updatedSkills});
+    });
+  }
+
   componentDidMount() {
     const { userID } = this.props;
     if (!userID) return;
@@ -69,7 +88,7 @@ class Resume extends Component {
       })
       .then((res) => {
         if (res && res.data && res.data.skills) {
-          this.setState({ skills: res.data.skills.sort() });
+          this.setState({ skills: res.data.skills.sort() }, () => this.localizeSkills());
         }
       });
   }
@@ -145,8 +164,7 @@ class Resume extends Component {
             skills: res.data && res.data.skills ? res.data.skills.sort() : [],
             openSnackBar: true,
             typeSnackBar: 'success',
-          });
-          console.log('skills: ', this.state.skills);
+          }, () => this.localizeSkills());
         })
         .catch((err) => {
           this.setState({
@@ -223,20 +241,23 @@ class Resume extends Component {
   saveEdits() {
     const { editedSkills } = this.state;
     const { userID } = this.props;
-    axios.post(
-      `http://${window.location.hostname}:8080/api/updateResumeSkills`,
-      {
-        userID,
-        skills: [
-          ...new Set(
-            editedSkills ? editedSkills.filter((skill) => skill).sort() : []
-          ),
-        ],
-      }
-    );
     this.setState({
       isEditing: false,
       skills: editedSkills ? editedSkills.map((skill) => skill).sort() : [],
+    }, () => {
+      axios.post(
+        `http://${window.location.hostname}:8080/api/updateResumeSkills`,
+        {
+          userID,
+          skills: [
+            ...new Set(
+              editedSkills ? editedSkills.filter((skill) => skill).sort() : []
+            ),
+          ],
+        }
+      ).then(() => {
+        this.localizeSkills();
+      });
     });
   }
 

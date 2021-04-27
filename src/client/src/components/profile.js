@@ -64,7 +64,6 @@ class Profile extends Component {
             yearsExperience: res.data.yearsExperience,
           },
         });
-        console.log(`Profile: ${JSON.stringify(res.data)}`);
       });
   }
 

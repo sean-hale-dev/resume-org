@@ -11,6 +11,12 @@ const mongo_client = require('mongodb');
 // import search from './search.js';
 const search = require('./utils/search.js');
 const { strict } = require('assert');
+const { WSAECONNREFUSED } = require('constants');
+const axios = require('axios');
+
+// prompt API
+const https = require('https');
+const basic_path = `https://api.promptapi.com/skills?apikey=${process.env.PROMPT_API_KEY}&count=1&q=`;
 const { getClientPermissions, hasServerPermission, PERMISSION_LEVELS } = require('./utils/auth.js');
 
 const endpointPrefix = '/api';
@@ -127,6 +133,7 @@ mongo_client.connect(
      * @param {String} body.userID 
      */
     app.post(endpointPrefix + '/resume-search', (req, res) => {
+      console.log("Search");
       const { userID } = req.body;
       hasServerPermission(userID, db, '/resume-search').then(authorized => {
         if (authorized) {
@@ -267,6 +274,18 @@ mongo_client.connect(
         }
       });
     });
+    
+    /**
+     * @param {Array<Array<String>>} body.skillarrays Nested arrays representing skills to fetch
+     */
+    app.post(endpointPrefix + '/skill-display-names', (req, res) => {
+      if(req.body.skillarrays) {
+        getSkillDisplayNameArrays(db, res, req.body.skillarrays, req.query.assoc == "true" ? true : false);
+      }
+      else {
+        res.send({message: "Error: need to provide a skill or skills."});
+      }
+    });
 
     /**
      * @param {String} body.userID 
@@ -287,7 +306,7 @@ mongo_client.connect(
      * Query items:
      * @query userID Fully optional; userID to check
      */
-    app.get('/getClientPermissions', (req, res) => {
+    app.get(endpointPrefix + '/getClientPermissions', (req, res) => {
       const { userID } = req.query;
       hasServerPermission(userID, db, '/getClientPermissions').then(authorized => {
         if (authorized) {
@@ -301,7 +320,7 @@ mongo_client.connect(
     /**
      * @param {String} body.userID 
      */
-    app.post('/adminGetProfiles', (req, res) => {
+    app.post(endpointPrefix + '/adminGetProfiles', (req, res) => {
       const { userID } = req.body;
       console.log("Fetching all profiles");
       hasServerPermission(userID, db, '/adminGetProfiles').then(authorized => {
@@ -319,7 +338,7 @@ mongo_client.connect(
      * @param {String} body.targetUserID userID to update
      * @param {Object} updates Profile updates
      */
-    app.post('/adminUpdateProfile', (req, res) => {
+    app.post(endpointPrefix + '/adminUpdateProfile', (req, res) => {
       const { userID, targetUserID, updates } = req.body;
       hasServerPermission(userID, db, '/adminUpdateProfile').then(authorized => {
         if (authorized) {
@@ -334,7 +353,7 @@ mongo_client.connect(
      * @param {String} body.userID Your userID
      * @param {String} body.targetUserID userID to delete
      */
-    app.post('/adminDeleteProfile', (req, res) => {
+    app.post(endpointPrefix + '/adminDeleteProfile', (req, res) => {
       const { userID, targetUserID } = req.body;
       hasServerPermission(userID, db, '/adminDeleteProfile').then(authorized => {
         if (authorized) {
@@ -350,6 +369,104 @@ mongo_client.connect(
     });
   }
 );
+
+function getSkillDisplayName(db, skill) {
+  return new Promise((resolve, reject) => {
+    db.collection('skill_assoc').findOne({name: skill}, (err, results) => {
+      if (err) return reject(err);
+      return resolve({ name: skill, display_name: results == null ? null : results.display_name }) ;
+    });
+  });
+}
+
+// returns a promise - resolve with an array of objects with a skill and the associated skill name
+// see getSkillDisplayNameArrays() return type assoc == true -> format is the same as the display_assoc property
+function getSkillDisplayNames(db, skills) {
+  return new Promise((resolve, reject) => {
+    db.collection('skill_assoc').find({name: { $in: skills }}).toArray((err, results) => {
+      if (err) return reject(err);
+      full_skills = results.map(d => { return {
+        name: d.name,
+        display_name: (d.display_name && d.display_name.toLowerCase() == d.name) ? d.display_name : cap(d.name)
+      }});
+      return resolve(full_skills);
+    });
+  });
+}
+
+/* takes in the database, res for sending back a JSON, the skill arrays from the user,
+   and a boolean (assoc) that tells the function how to format the returned data
+   assoc == true:
+   return {
+            display_assoc: [
+              [
+                {
+                  skill: <the skill name>,
+                  display_name: <the display name>
+                },
+                ...
+              ],
+              ...
+            ]
+          }
+   
+   assoc == false:
+   return a one-to-one array of arrays matching the skillarrays posted, except the 
+   returned array of arrays is filled with display names instead of skills
+   return {
+            display_assoc: [
+              [
+                <1st display name>, <2nd display name>, ...
+              ],
+              ...
+            ]
+          }
+*/
+function getSkillDisplayNameArrays(db, res, skillarrays, assoc) {
+  
+  var all_skills = [];
+  var display_names = [];
+  
+  skillarrays.forEach(element => {
+    all_skills.push(...element);
+  });
+  
+  
+  db.collection('skill_assoc').find({name: { $in: all_skills }}).toArray((err, results) => {
+    if (err) {
+      res.json({ error: err });
+    } else {
+      full_skills = results.map(d => { return {
+        skill: d.name,
+        display_name: (d.display_name && d.display_name.toLowerCase() == d.name) ? d.display_name : cap(d.name)
+      }});
+      skillarrays.forEach(arr => {
+        var in_arr = [];
+        arr.forEach(element => {
+          (assoc == true) ?
+          (in_arr.push({ skill: element, display_name: full_skills.find(x => x.skill == element).display_name })) :
+          (in_arr.push(full_skills.find(x => x.skill == element).display_name));
+        });
+        display_names.push(in_arr);
+      });
+      res.json({ display_assoc: display_names});
+    }
+  });
+  
+}
+
+// capitalizes the first letter of every word in a string and then returns it
+// used when a skill doens't have a valid display_name
+function cap(str) {
+  arr = str.split(" ");
+  arr = arr.map(word => word.substring(0,1).toUpperCase() + word.substring(1).toLowerCase());
+  return arr.join(" ");
+}
+
+// Get list of all skills for searching
+// function getAllSearchableSkills(db, res) {
+//   db.collection('skill_assoc').find({name: {$exists: true}}).toArray((err, results) => {
+
 
 // Get list of all user profiles
 function adminGetProfiles(db, res) {
@@ -454,8 +571,7 @@ function getAllSearchableSkills(db, res) {
       } else {
         const skills = results
           .filter((result) => result.resumes && result.resumes.length)
-          .map((result) => result.name);
-        // console.log(skills);
+          .map((result) => ({name: result.name, display_name: (result.display_name && result.display_name.toLowerCase() == result.name ? result.display_name : cap(result.name))}));
         res.json(skills);
       }
     });
@@ -512,7 +628,7 @@ function getResumeSkillsByUserID(userID, db, res) {
     .findOne({ employee: userID })
     .then((resume) => {
       if (resume && resume.skills) {
-        res.json({ skills: resume.skills });
+        res.json({skills: resume.skills});
       } else {
         res.json({ skills: [] });
       }
@@ -524,7 +640,7 @@ function updateResumeSkillsByUserID(userID, skills, db, res) {
   // Filter skills to ensure no duplicates
   skills =
     skills && Array.isArray(skills)
-      ? [...new Set(skills.filter((skill) => skill).map((skill) => `${skill}`))]
+      ? [...new Set(skills.filter((skill) => skill).map((skill) => `${skill.toLowerCase()}`))]
       : [];
 
   const newSkillsSet = new Set(skills);
@@ -544,10 +660,8 @@ function updateResumeSkillsByUserID(userID, skills, db, res) {
       const skillsToAdd = [...newSkillsSet].filter(
         (skill) => !oldResumeSkillsSet.has(skill)
       );
-      console.log(`Old skills: ${JSON.stringify([...oldResumeSkillsSet])}`);
-      console.log(`New skills: ${JSON.stringify([...newSkillsSet])}`);
-      console.log(`Removing ${JSON.stringify(skillsToRemove)}`);
-      console.log(`Adding ${JSON.stringify(skillsToAdd)}`);
+      console.log(`Removing ${JSON.stringify(skillsToRemove)} from ${userID}`);
+      console.log(`Adding ${JSON.stringify(skillsToAdd)} to ${userID}`);
       db.collection('skill_assoc')
         .find({ name: { $exists: true } })
         .toArray((err, allSkills) => {
@@ -601,10 +715,12 @@ function updateResumeSkillsByUserID(userID, skills, db, res) {
                         {
                           $set: { skills },
                         }
-                      )
-                      .then(() => {
-                        getResumeSkillsByUserID(userID, db, res);
-                      });
+                      ).then(() => {
+                        checkForNewDisplayNames(db, skills)
+                        .then(() => {
+                          getResumeSkillsByUserID(userID, db, res);
+                        });
+                      })
                   });
               });
           });
@@ -758,6 +874,7 @@ function generateReport(searchString, db, res) {
     strictMatchCount: 0,
     looseMatchCount: 0,
     individualSkillMatches: {},
+    displayNames: {},
   };
 
   if (!validation.good) {
@@ -770,45 +887,34 @@ function generateReport(searchString, db, res) {
     return;
   }
 
-  const searchTerms = searchString
-    .toLowerCase()
-    .split(/[\|\*&!\(\)]+/)
-    .map((term) => term.trim());
-  const trimmedSearchTerms = searchTerms.filter(
-    (term, index) => term || index == searchTerms.length - 1
-  );
-  const looseSearchString = trimmedSearchTerms.join(' | ');
-  const searchPromises = [...new Set(trimmedSearchTerms)].map((skill) =>
-    search.search(skill).then((resumeIDSet) => {
+  const searchTerms = searchString.toLowerCase().split(/[\|\*&!\(\)]+/).map(term => term.trim());
+  const trimmedSearchTerms = searchTerms.filter((term, index) => term || index == searchTerms.length - 1);
+  const looseSearchString = trimmedSearchTerms.join(" | ");
+  
+  getSkillDisplayNames(db, trimmedSearchTerms).then(display_names => {
+    trimmedSearchTerms.forEach(tst => {
+      response.displayNames[tst] = display_names.find(x => x.name == tst).display_name;
+    });
+    const searchPromises = [...new Set(trimmedSearchTerms)].map(skill => search.search(skill).then(resumeIDSet => {
       if (resumeIDSet.status != -1) {
         response.individualSkillMatches[skill] = resumeIDSet.payload.size;
       }
-    })
-  );
-  searchPromises.push(
-    db
-      .collection('resumes')
-      .countDocuments({})
-      .then((resumeCount) => {
-        response.employeeCount = resumeCount || 0;
-      })
-  );
-  searchPromises.push(
-    search.search(searchString).then((resumeIDSet) => {
+    }));
+    searchPromises.push(db.collection('resumes').countDocuments({}).then(resumeCount => {
+      response.employeeCount = resumeCount || 0;
+    }));
+    searchPromises.push(search.search(searchString).then(resumeIDSet => {
       if (resumeIDSet.status != -1) {
         response.strictMatchCount = resumeIDSet.payload.size;
       }
-    })
-  );
-  searchPromises.push(
-    search.search(looseSearchString).then((resumeIDSet) => {
+    }));
+    searchPromises.push(search.search(looseSearchString).then(resumeIDSet => {
       if (resumeIDSet.status != -1) {
         response.looseMatchCount = resumeIDSet.payload.size;
       }
-    })
-  );
-  Promise.all(searchPromises).then(() => res.json(response));
-
+    }));
+    Promise.all(searchPromises).then(() => res.json(response));
+  });
 }
 
 // uploads a resume as a new document in the "resumes" collection in the database
@@ -847,7 +953,7 @@ function insertNewSkills(db, allCurrentKeys, skills_json) {
   var newSkills = [];
   for (key in skills_json.skills) {
     if (!allCurrentKeys.includes(skills_json.skills[key])) {
-      newSkills.push({ name: skills_json.skills[key], resumes: [] });
+      newSkills.push({ name: skills_json.skills[key], resumes: [], display_name: "" });
     }
   }
   if (newSkills.length > 0) {
@@ -883,18 +989,26 @@ function getExtFromType(type) {
 // update the skill_assoc collection in the database with the new resume
 function updateSkillAssoc(db, skills_json, resume_id) {
   console.log('updateMany happening');
-  db.collection('skill_assoc').updateMany(
-    {
-      name: {
-        $in: skills_json.skills,
+  
+  return new Promise((resolve, reject) => {
+    db.collection('skill_assoc').updateMany(
+      {
+        name: {
+          $in: skills_json.skills,
+        },
       },
-    },
-    {
-      $push: {
-        resumes: resume_id,
+      {
+        $push: {
+          resumes: resume_id,
+        },
       },
-    }
-  );
+      (err, res) => {
+        if (err) return reject(err);
+        console.log(`Update Many finished`);
+        return resolve(res);
+      }
+    );
+  });
 }
 
 // pulls a resume document from the database by its _id (ObjectID, not string)
@@ -953,6 +1067,77 @@ function sendResumeArrayToClient(resume_list, res) {
   res.json({ resumes: resume_list });
 }
 
+// adds or updates a display_name for a skill
+function addSkillDisplayName(db, skill, display) {
+  return new Promise((resolve, reject) => {
+    db.collection('skill_assoc').updateOne({name: skill}, { $set: {display_name: display} }, (err, results) => {
+      if (err) return reject(err);
+      return resolve({ name: skill, display_name: display }) ;
+    });
+  });
+}
+
+// takes in an array of skills and returns a list of display names
+// this checks if the skill has an associated display from the database
+// if there is one in the database, then that is added to the array that gets returned
+// if there isn't one, then the skills API is hit to see if it has a display name
+//   if the skills API returns a skill, then it is put in the array to be returned
+//   if the skills API returns no skills or if it gives an error, then a capitalized version of the
+//   skill will be returned in the array
+//
+// this function DOES NOT add skills to the database
+// the skills checked must be already in the database
+function checkForNewDisplayNames(db, skills) {
+  console.log("skills:", skills);
+  var display_names = [];
+  
+  const checkPromptAPI = async (s) => {
+    
+    try {
+      const dbRes = await getSkillDisplayName(db, s);
+      
+      if(dbRes == null) {
+        console.log(`${s} was not found in the database`);
+        
+      }
+      // console.log("dbRes:", dbRes)
+      // console.log("type dbRes:", typeof(dbRes))
+      // console.log("keys dbRes:", Object.keys(dbRes))
+      else if((!dbRes.display_name) || (dbRes.display_name.toLowerCase() != s)){
+        try {
+          const result = await axios.get(basic_path + encodeURIComponent(s));
+          // console.log("result.data:", result.data);
+          // console.log("result.data[0]:", result.data[0]);
+          return await addSkillDisplayName(db, s, (result.data[0].toLowerCase() != s) ? cap(s) : result.data[0]);
+        } catch (err) {
+          console.error(err);
+        }
+        
+      }
+      else {
+        return dbRes;
+      }
+      
+      
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  
+  return new Promise((resolve, reject) => {
+    skills.forEach((skill, index) => {
+      checkPromptAPI(skill).then(data => {
+        // `Failure on skill '${skill}'  -  returned ${JSON.stringify(data)}` :
+        // `Success on skill ${skill}  -  returned ${JSON.stringify(data)}`);
+        display_names.push(data.display_name.toLowerCase() != skill ? cap(skill) : data.display_name);
+        if(index == skills.length - 1) return resolve(display_names);
+      }).catch((err) => {
+        return reject(err);
+      });
+    });
+  });
+}
+
 // sends the resume file through the parser and sends the JSON of skills back to the client
 function parseResume(
   res,
@@ -987,14 +1172,28 @@ function parseResume(
           );
           return;
         }
-
+        
+        // CHECKING FOR DISPLAY NAMES HERE
+        
+        //getSkillDisplayNames(db, res, skills);
+        var oldSkills = [];
+        var newSkills = [];
+        for (key in skills) {
+          // console.log(skills_json.skills[key]);
+          if (!allCurrentKeys.includes(skills[key])) {
+            newSkills.push(skills[key]);
+          }
+          else {
+            oldSkills.push(skills[key]);
+          }
+        }
+        
         // Shape the skills into proper JSON format for func
-        const skills_json = {
-          skills: skills,
+        var skills_json = {
+          skills: skills
         };
 
-        // Send the parsed skills
-        res.json(skills_json);
+        
         var file_data = fs.readFileSync(args[0]);
         dbUpload(db, file_data, skills_json, file_type, userID).then(
           (resume_id) => {
@@ -1005,7 +1204,18 @@ function parseResume(
                 console.log(
                   'Insert skills promise resolved - about to update skills'
                 );
-                updateSkillAssoc(db, skills_json, resume_id);
+                updateSkillAssoc(db, skills_json, resume_id).then(() => {
+                  // checks for display names of new skills and puts a display name for each one in the database
+                  checkForNewDisplayNames(db, skills).then(display_names => {
+                    skills_json.displayNames = display_names;
+                    // Send the parsed skills
+                    res.json(skills_json);
+                    
+                  }).catch((err) => {
+                    console.log(err);
+                    res.json(skills_json);
+                  });
+                });
               })
               .catch((err) => {
                 console.log(err);
