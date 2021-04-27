@@ -100,7 +100,7 @@ class Reports extends Component {
               <Typography>There {result.employeeCount == 1 ? "is" : "are"} {result.employeeCount} employee{result.employeeCount == 1 ? "" : "s"} in the organization. {result.employeeCount == 1 ? "" : "Of those:"}</Typography>
               <Typography>{result.strictMatchCount} strictly match{result.strictMatchCount == 1 ? "es" : ""} the query ({(100.0 * result.strictMatchCount / result.employeeCount).toFixed(2)}% of the organization).</Typography>
               <Typography>{result.looseMatchCount} {result.looseMatchCount == 1 ? "has" : "have"} at least one skill in the query ({(100.0 * result.looseMatchCount / result.employeeCount).toFixed(2)}% of the organization).</Typography>
-              {Object.entries(result.individualSkillMatches).map(([skill, count]) => <Typography>{count} {count == 1 ? "has" : "have"} the skill "{skill}" ({(100.0 * count / result.employeeCount).toFixed(2)}% of the organization).</Typography>)}
+              {Object.entries(result.individualSkillMatches).map(([skill, count]) => <Typography>{count} {count == 1 ? "has" : "have"} the skill "{result.displayNames[skill]}" ({(100.0 * count / result.employeeCount).toFixed(2)}% of the organization).</Typography>)}
             </>}
           </div>
         </Card>

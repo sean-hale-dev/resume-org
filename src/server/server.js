@@ -214,26 +214,10 @@ mongo_client.connect(
       getAllSearchableSkills(db, res);
     });
     
-    app.get('/skill-display-names', (req, res) => {
-      if(req.query.skill) {
-        getSkillDisplayName(db, res, skill);
-      }
-      else if(req.query.skills) {
-        getSkillDisplayNames(db, res, JSON.parse(req.query.skills).skills);
-      }
-      else {
-        res.send({message: "Error: need to provide a skill or skills."});
-      }
-    });
-    
     app.post('/skill-display-names', (req, res) => {
       if(req.body.skill) {
         // console.log("skill:", req.body.skill);
         getSkillDisplayName(db, res, skill);
-      }
-      else if(req.body.skills) {
-        // console.log("skills:", req.body.skills);
-        getSkillDisplayNames(db, res, JSON.parse(req.query.skills).skills);
       }
       else if(req.body.skillarrays) {
         // console.log("skillarrays:", req.body.skillarrays);
@@ -259,17 +243,20 @@ function getSkillDisplayName(db, res, skill) {
   });
 }
 
-function getSkillDisplayNames(db, res, skills) {
-  db.collection('skill_assoc').find({name: { $in: skills }}).toArray((err, results) => {
-    if (err) {
-      res.json({ error: err });
-    } else {
+// returns a promise - resolve with an array of objects with a skill and the associated skill name
+// see getSkillDisplayNameArrays() return type assoc == true -> format is the same as the display_assoc property
+function getSkillDisplayNames(db, skills) {
+  return new Promise((resolve, reject) => {
+    db.collection('skill_assoc').find({name: { $in: skills }}).toArray((err, results) => {
+      if (err) return reject(err);
+      console.log(results);
       full_skills = results.map(d => { return {
         name: d.name,
         display_name: (d.display_name && d.display_name.toLowerCase() == d.name) ? d.display_name : cap(d.name)
       }});
-      res.json(full_skills) ;
-    }
+      console.log(full_skills);
+      return resolve(full_skills);
+    });
   });
 }
 
@@ -304,7 +291,7 @@ function getSkillDisplayNames(db, res, skills) {
 function getSkillDisplayNameArrays(db, res, skillarrays, assoc) {
   
   var all_skills = [];
-  var display_skills = [];
+  var display_names = [];
   
   skillarrays.forEach(element => {
     all_skills.push(...element);
@@ -329,10 +316,10 @@ function getSkillDisplayNameArrays(db, res, skillarrays, assoc) {
           (in_arr.push({ skill: element, display_name: full_skills.find(x => x.skill == element).display_name })) :
           (in_arr.push(full_skills.find(x => x.skill == element).display_name));
         });
-        display_skills.push(in_arr);
+        display_names.push(in_arr);
       });
-      console.log("display_skills:", display_skills);
-      res.json({ display_assoc: display_skills});
+      console.log("display_names:", display_names);
+      res.json({ display_assoc: display_names});
     }
   });
   
@@ -614,6 +601,7 @@ function generateReport(searchString, db, res) {
     strictMatchCount: 0,
     looseMatchCount: 0,
     individualSkillMatches: {},
+    displayNames: {}
   }
 
   if (!validation.good) {
@@ -632,25 +620,33 @@ function generateReport(searchString, db, res) {
   //   res.json([]);
   //   return;
   // }
-  const searchPromises = [...new Set(trimmedSearchTerms)].map(skill => search.search(skill).then(resumeIDSet => {
-    if (resumeIDSet.status != -1) {
-      response.individualSkillMatches[skill] = resumeIDSet.payload.size;
-    }
-  }));
-  searchPromises.push(db.collection('resumes').countDocuments({}).then(resumeCount => {
-    response.employeeCount = resumeCount || 0;
-  }));
-  searchPromises.push(search.search(searchString).then(resumeIDSet => {
-    if (resumeIDSet.status != -1) {
-      response.strictMatchCount = resumeIDSet.payload.size;
-    }
-  }));
-  searchPromises.push(search.search(looseSearchString).then(resumeIDSet => {
-    if (resumeIDSet.status != -1) {
-      response.looseMatchCount = resumeIDSet.payload.size;
-    }
-  }));
-  Promise.all(searchPromises).then(() => res.json(response));
+  
+  getSkillDisplayNames(db, trimmedSearchTerms).then(display_names => {
+    trimmedSearchTerms.forEach(tst => {
+      response.displayNames[tst] = display_names.find(x => x.name == tst).display_name;
+    });
+    console.log(response.displayNames);
+    const searchPromises = [...new Set(trimmedSearchTerms)].map(skill => search.search(skill).then(resumeIDSet => {
+      if (resumeIDSet.status != -1) {
+        response.individualSkillMatches[skill] = resumeIDSet.payload.size;
+      }
+    }));
+    searchPromises.push(db.collection('resumes').countDocuments({}).then(resumeCount => {
+      response.employeeCount = resumeCount || 0;
+    }));
+    searchPromises.push(search.search(searchString).then(resumeIDSet => {
+      if (resumeIDSet.status != -1) {
+        response.strictMatchCount = resumeIDSet.payload.size;
+      }
+    }));
+    searchPromises.push(search.search(looseSearchString).then(resumeIDSet => {
+      if (resumeIDSet.status != -1) {
+        response.looseMatchCount = resumeIDSet.payload.size;
+      }
+    }));
+    Promise.all(searchPromises).then(() => res.json(response));
+  });
+  
 
   // db.collection('resumes').countDocuments({}).then(resumeCount => {
   //   response.employeeCount = resumeCount || 0;
