@@ -283,12 +283,18 @@ mongo_client.connect(
      */
     app.post(endpointPrefix + '/skill-display-names', (req, res) => {
       const { userID } = req.cookies;
-      if(req.body.skillarrays) {
-        getSkillDisplayNameArrays(db, res, req.body.skillarrays, req.query.assoc == "true" ? true : false);
-      }
-      else {
-        res.send({message: "Error: need to provide a skill or skills."});
-      }
+      hasServerPermission(userID, db, '/skill-display-names').then(authorized => {
+        if (authorized) {
+          if(req.body.skillarrays) {
+            getSkillDisplayNameArrays(db, res, req.body.skillarrays, req.query.assoc == "true" ? true : false);
+          }
+          else {
+            res.send({message: "Error: need to provide a skill or skills."});
+          }
+        } else {
+          res.send({message: "Error: insufficient perms"});
+        }
+      });
     });
 
     /**
