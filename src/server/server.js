@@ -516,9 +516,9 @@ function getSkillDisplayNameArrays(db, res, skillarrays, assoc) {
 // used when a skill doens't have a valid display_name
 function cap(str) {
   arr = str.split(" ");
-  console.log(arr);
+  // console.log(arr);
   arr = arr.map(word => word.substring(0,1).toUpperCase() + word.substring(1).toLowerCase());
-  console.log(arr);
+  // console.log(arr);
   return arr.join(" ");
 }
 
@@ -628,9 +628,10 @@ function getAllSearchableSkills(db, res) {
       if (err) {
         res.json([]);
       } else {
+        // console.log(results);
         const skills = results
           .filter((result) => result.resumes && result.resumes.length)
-          .map((result) => result.name);
+          .map((result) => ({name: result.name, display_name: (result.display_name && result.display_name.toLowerCase() == result.name ? result.display_name : cap(result.name))}));
         // console.log(skills);
         res.json(skills);
       }
@@ -688,7 +689,16 @@ function getResumeSkillsByUserID(userID, db, res) {
     .findOne({ employee: userID })
     .then((resume) => {
       if (resume && resume.skills) {
-        res.json({ skills: resume.skills });
+        // db.collection('skill_assoc').find({name: { $in: resume.skills }}).toArray((err, results) => {
+        //   res.json({ 
+        //     // skills: resume.skills
+        //     skills: results.map(skill => ({
+        //       name: skill.name,
+        //       display_name: (skill.display_name && skill.display_name.toLowerCase() == skill.name ? skill.display_name : cap(skill.name)),
+        //     }))
+        //   });
+        // });
+        res.json({skills: resume.skills});
       } else {
         res.json({ skills: [] });
       }
@@ -700,7 +710,7 @@ function updateResumeSkillsByUserID(userID, skills, db, res) {
   // Filter skills to ensure no duplicates
   skills =
     skills && Array.isArray(skills)
-      ? [...new Set(skills.filter((skill) => skill).map((skill) => `${skill}`))]
+      ? [...new Set(skills.filter((skill) => skill).map((skill) => `${skill.toLowerCase()}`))]
       : [];
 
   const newSkillsSet = new Set(skills);
@@ -777,10 +787,12 @@ function updateResumeSkillsByUserID(userID, skills, db, res) {
                         {
                           $set: { skills },
                         }
-                      )
-                      .then(() => {
-                        getResumeSkillsByUserID(userID, db, res);
-                      });
+                      ).then(() => {
+                        checkForNewDisplayNames(db, skills)
+                        .then(() => {
+                          getResumeSkillsByUserID(userID, db, res);
+                        });
+                      })
                   });
               });
           });

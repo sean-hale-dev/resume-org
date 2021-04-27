@@ -60,6 +60,16 @@ class Resume extends Component {
     };
   }
 
+  localizeSkills() {
+    const {skills} = this.state;
+    axios.post(`http://${window.location.hostname}:8080/api/skill-display-names?assoc=true`, { skillarrays: [skills.map(skill => skill.toLowerCase())] }).then(result => {
+      console.log(result.data);
+      const skill_assoc = result.data.display_assoc[0];
+      console.log(skill_assoc);
+      this.setState({skills: skill_assoc.map(skill => skill.display_name || skill.name).sort()});
+    });
+  }
+
   componentDidMount() {
     const { userID } = this.props;
     if (!userID) return;
@@ -69,7 +79,7 @@ class Resume extends Component {
       })
       .then((res) => {
         if (res && res.data && res.data.skills) {
-          this.setState({ skills: res.data.skills.sort() });
+          this.setState({ skills: res.data.skills.sort() }, () => this.localizeSkills());
         }
       });
   }
@@ -145,7 +155,7 @@ class Resume extends Component {
             skills: res.data && res.data.skills ? res.data.skills.sort() : [],
             openSnackBar: true,
             typeSnackBar: 'success',
-          });
+          }, () => this.localizeSkills());
           console.log('skills: ', this.state.skills);
         })
         .catch((err) => {
@@ -223,20 +233,23 @@ class Resume extends Component {
   saveEdits() {
     const { editedSkills } = this.state;
     const { userID } = this.props;
-    axios.post(
-      `http://${window.location.hostname}:8080/api/updateResumeSkills`,
-      {
-        userID,
-        skills: [
-          ...new Set(
-            editedSkills ? editedSkills.filter((skill) => skill).sort() : []
-          ),
-        ],
-      }
-    );
     this.setState({
       isEditing: false,
       skills: editedSkills ? editedSkills.map((skill) => skill).sort() : [],
+    }, () => {
+      axios.post(
+        `http://${window.location.hostname}:8080/api/updateResumeSkills`,
+        {
+          userID,
+          skills: [
+            ...new Set(
+              editedSkills ? editedSkills.filter((skill) => skill).sort() : []
+            ),
+          ],
+        }
+      ).then(() => {
+        this.localizeSkills();
+      });
     });
   }
 

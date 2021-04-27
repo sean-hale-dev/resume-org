@@ -83,6 +83,18 @@ function validateSearchQuery(queryString) {
 }
 
 /**
+ * Compare two strings
+ * @param {String} a 
+ * @param {String} b 
+ * @returns 1 if a > b, -1 if a < 0, 0 if a == b
+ */
+ const stringCompare = (a, b) => {
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+};
+
+/**
  * Props:
  * @param {*} location React Router location
  * @param {String} userID userID string
@@ -115,7 +127,7 @@ class SearchBar extends Component {
           const skills = res.data;
           console.log(skills);
           this.setState(
-            { searchOptions: Array.isArray(skills) ? skills.sort() : [] },
+            { searchOptions: Array.isArray(skills) ? skills.sort((a, b) => stringCompare(a.name, b.name)) : [] },
             () => this.updateSearchOptions()
           );
         }
@@ -151,12 +163,15 @@ class SearchBar extends Component {
     const lastTerm = this.getLastTerm(searchText);
     const MAX_TERMS_TO_RENDER = 1000;
     const activeOptions = searchOptions
-      .filter((option) => option.toLowerCase().includes(lastTerm))
-      .sort((a, b) => a.length - b.length)
+      .filter((option) => option.name.toLowerCase().includes(lastTerm))
+      .sort((a, b) => a.name.length - b.name.length)
       .filter((option, index) => index < MAX_TERMS_TO_RENDER)
-      .sort()
-      .sort((a, b) => a.indexOf(lastTerm) - b.indexOf(lastTerm));
-
+      .sort((a, b) => stringCompare(a.name, b.name))
+      .sort((a, b) => a.name.indexOf(lastTerm) - b.name.indexOf(lastTerm))
+      .map(option => (option.display_name && option.display_name.toLowerCase() == option.name) ? option.display_name : option.name);
+    
+    console.log("Active options:");
+    console.log(activeOptions);
     this.setState({ activeOptions });
   }
 
