@@ -1,4 +1,4 @@
-name: Deploy using AWS SSM Send-Command
+name: Deploy using AWS SSM Send-Command 
 
 on:
     push:
@@ -6,18 +6,18 @@ on:
 
 jobs:
     start:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-latest 
 
         steps:
             - uses: actions/checkout@v2
 
-        - name: AWS SSM Send Command
+            - name: AWS SSM Send Command
               uses: peterkimzz/aws-ssm-send-command@1.0.1
-          with:
-              aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY  }}
-          aws-region: us-east-1
-          instance-ids: ${{ secrets.INSTANCE_ID  }}
-          comment: Deploy the main branch
-          working-directory: /home/ubuntu/resume-org
-          command: /bin/sh ./deploy.sh
+              with:
+                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
+                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY  }}
+                  aws-region: us-east-1
+                  instance-ids: ${{ secrets.INSTANCE_ID  }}
+                  comment: Deploy main 
+                  working-directory: /home/ubuntu/resume-org
+                  command: /bin/sh deploy.sh
