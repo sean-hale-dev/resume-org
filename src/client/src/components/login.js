@@ -45,7 +45,7 @@ class Login extends Component {
     cookies.set('userID', userText);
     this.setState({ userText: '' }, () => {
       axios
-        .post(`http://${window.location.hostname}:8080/api/login`, {
+        .post(`/api/login`, {
           userID: userText,
         })
         .then((res) => {

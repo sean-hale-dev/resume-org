@@ -57,9 +57,8 @@ class Reports extends Component {
       snackBarText: 'Generating report...',
     });
     axios
-      .post(`http://${window.location.hostname}:8080/api/resume-report`, {
+      .post(`/api/resume-report`, {
         queryString: searchText,
-        userID,
       })
       .then((res) => {
         console.log(res);

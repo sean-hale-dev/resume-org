@@ -41,6 +41,18 @@ const styles = (theme) => ({
 });
 
 /**
+ * Compare two strings
+ * @param {String} a 
+ * @param {String} b 
+ * @returns 1 if a > b, -1 if a < 0, 0 if a == b
+ */
+ const stringCompare = (a, b) => {
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+}
+
+/**
  * Props:
  * @param {String} userID userID string
  * @param {Object} clientPermissions Object containing list of links that client has access to
@@ -65,7 +77,7 @@ class Resume extends Component {
    */
   localizeSkills() {
     const {skills} = this.state;
-    axios.post(`http://${window.location.hostname}:8080/api/skill-display-names?assoc=true`, { skillarrays: [skills.map(skill => skill.toLowerCase())] }).then(result => {
+    axios.post(`/api/skill-display-names?assoc=true`, { skillarrays: [skills.map(skill => skill.toLowerCase())] }).then(result => {
       const skill_assoc = result.data.display_assoc[0];
       console.log(skill_assoc);
       const skill_map = {};
@@ -73,7 +85,7 @@ class Resume extends Component {
         skill_map[skill.skill] = skill.display_name || skill.skill;
       });
       console.log(skill_map);
-      const updatedSkills = skills.map(skill => skill_map[skill.toLowerCase()] || skill).sort();
+      const updatedSkills = skills.map(skill => skill_map[skill.toLowerCase()] || skill).sort((a, b) => stringCompare(a.toLowerCase(), b.toLowerCase()));
       console.log(updatedSkills);
       this.setState({skills: updatedSkills});
     });
@@ -83,12 +95,10 @@ class Resume extends Component {
     const { userID } = this.props;
     if (!userID) return;
     axios
-      .post(`http://${window.location.hostname}:8080/api/getResumeSkills`, {
-        userID,
-      })
+      .get(`/api/getResumeSkills`)
       .then((res) => {
         if (res && res.data && res.data.skills) {
-          this.setState({ skills: res.data.skills.sort() }, () => this.localizeSkills());
+          this.setState({ skills: res.data.skills.sort((a, b) => stringCompare(a.toLowerCase(), b.toLowerCase())) }, () => this.localizeSkills());
         }
       });
   }
@@ -151,7 +161,7 @@ class Resume extends Component {
       formData.append('userID', this.props.userID);
       axios
         .post(
-          `http://${window.location.hostname}:8080/api/resume-upload`,
+          `/api/resume-upload`,
           formData,
           {
             headers: {
@@ -161,7 +171,7 @@ class Resume extends Component {
         )
         .then((res) => {
           this.setState({
-            skills: res.data && res.data.skills ? res.data.skills.sort() : [],
+            skills: res.data && res.data.skills ? res.data.skills.sort((a, b) => stringCompare(a.toLowerCase(), b.toLowerCase())) : [],
             openSnackBar: true,
             typeSnackBar: 'success',
           }, () => this.localizeSkills());
@@ -243,12 +253,11 @@ class Resume extends Component {
     const { userID } = this.props;
     this.setState({
       isEditing: false,
-      skills: editedSkills ? editedSkills.map((skill) => skill).sort() : [],
+      skills: editedSkills ? editedSkills.map((skill) => skill).sort((a, b) => stringCompare(a.toLowerCase(), b.toLowerCase())) : [],
     }, () => {
       axios.post(
-        `http://${window.location.hostname}:8080/api/updateResumeSkills`,
+        `/api/updateResumeSkills`,
         {
-          userID,
           skills: [
             ...new Set(
               editedSkills ? editedSkills.filter((skill) => skill).sort() : []

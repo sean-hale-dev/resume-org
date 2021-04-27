@@ -22,6 +22,7 @@ const { getClientPermissions, hasServerPermission, PERMISSION_LEVELS } = require
 const endpointPrefix = '/api';
 
 // TODO: ADD AUTHENTICATION
+const cookieParser = require('cookie-parser');
 
 mongo_client.connect(
   process.env.MONGO_SERVER_URI,
@@ -44,6 +45,7 @@ mongo_client.connect(
 
     app.use(bodyParser.urlencoded({ extended: false, limit: '10mb' }));
     app.use(bodyParser.json({ limit: '10mb' }));
+    app.use(cookieParser());
 
     app.post(endpointPrefix + '/resume-upload', (req, res) => {
       // TODO: Protect with authorization
@@ -134,7 +136,7 @@ mongo_client.connect(
      */
     app.post(endpointPrefix + '/resume-search', (req, res) => {
       console.log("Search");
-      const { userID } = req.body;
+      const { userID } = req.cookies;
       hasServerPermission(userID, db, '/resume-search').then(authorized => {
         if (authorized) {
           console.log('Searching');
@@ -150,7 +152,7 @@ mongo_client.connect(
      * @param {String} body.userID 
      */
     app.post(endpointPrefix + '/resume-report', (req, res) => {
-      const { userID } = req.body;
+      const { userID } = req.cookies;
       hasServerPermission(userID, db, '/resume-report').then(authorized => {
         if (authorized) {
           console.log('Generating report');
@@ -220,8 +222,8 @@ mongo_client.connect(
     /**
      * @param {String} body.userID 
      */
-    app.post(endpointPrefix + '/getProfile', (req, res) => {
-      const { userID } = req.body;
+    app.get(endpointPrefix + '/getProfile', (req, res) => {
+      const { userID } = req.cookies;
       hasServerPermission(userID, db, '/getProfile').then(authorized => {
         if (authorized) {
           getProfile(userID, db, res);
@@ -236,7 +238,8 @@ mongo_client.connect(
      * @param {Object} body.details details to add to profile
      */
     app.post(endpointPrefix + '/updateProfile', (req, res) => {
-      const { userID, details } = req.body;
+      const { userID } = req.cookies;
+      const { details } = req.body;
       hasServerPermission(userID, db, '/updateProfile').then(authorized => {
         if (authorized) {
           updateProfile(userID, details, db, res);
@@ -249,8 +252,8 @@ mongo_client.connect(
     /**
      * @param {String} body.userID 
      */
-    app.post(endpointPrefix + '/getResumeSkills', (req, res) => {
-      const { userID } = req.body;
+    app.get(endpointPrefix + '/getResumeSkills', (req, res) => {
+      const { userID } = req.cookies;
       hasServerPermission(userID, db, '/getResumeSkills').then(authorized => {
         if (authorized) {
           getResumeSkillsByUserID(userID, db, res);
@@ -261,11 +264,11 @@ mongo_client.connect(
     });
 
     /**
-     * @param {String} body.userID 
      * @param {Array} skills New list of skills
      */
     app.post(endpointPrefix + '/updateResumeSkills', (req, res) => {
-      const { userID, skills } = req.body;
+      const { userID } = req.cookies;
+      const { skills } = req.body;
       hasServerPermission(userID, db, '/updateResumeSkills').then(authorized => {
         if (authorized) {
           updateResumeSkillsByUserID(userID, skills, db, res);
@@ -279,6 +282,7 @@ mongo_client.connect(
      * @param {Array<Array<String>>} body.skillarrays Nested arrays representing skills to fetch
      */
     app.post(endpointPrefix + '/skill-display-names', (req, res) => {
+      const { userID } = req.cookies;
       if(req.body.skillarrays) {
         getSkillDisplayNameArrays(db, res, req.body.skillarrays, req.query.assoc == "true" ? true : false);
       }
@@ -290,8 +294,12 @@ mongo_client.connect(
     /**
      * @param {String} body.userID 
      */
-    app.post(endpointPrefix + '/getAllSearchableSkills', (req, res) => {
-      const {userID} = req.body;
+    app.get(endpointPrefix + '/getAllSearchableSkills', (req, res) => {
+      // const {userID} = req.body;
+      const { userID } = req.cookies;
+      console.log(JSON.stringify(req.cookies));
+      // console.log(JSON.stringify(req.signedCookies));
+      // console.log(Object.keys(req));
       hasServerPermission(userID, db, '/getAllSearchableSkills').then(authorized => {
         if (authorized) {
           getAllSearchableSkills(db, res);
@@ -307,7 +315,7 @@ mongo_client.connect(
      * @query userID Fully optional; userID to check
      */
     app.get(endpointPrefix + '/getClientPermissions', (req, res) => {
-      const { userID } = req.query;
+      const { userID } = req.cookies;
       hasServerPermission(userID, db, '/getClientPermissions').then(authorized => {
         if (authorized) {
           getClientPermissions(userID, db).then(perms => res.json(perms));
@@ -320,8 +328,8 @@ mongo_client.connect(
     /**
      * @param {String} body.userID 
      */
-    app.post(endpointPrefix + '/adminGetProfiles', (req, res) => {
-      const { userID } = req.body;
+    app.get(endpointPrefix + '/adminGetProfiles', (req, res) => {
+      const { userID } = req.cookies;
       console.log("Fetching all profiles");
       hasServerPermission(userID, db, '/adminGetProfiles').then(authorized => {
         if (authorized) {
@@ -334,12 +342,12 @@ mongo_client.connect(
     });
 
     /**
-     * @param {String} body.userID Your userID
      * @param {String} body.targetUserID userID to update
      * @param {Object} updates Profile updates
      */
     app.post(endpointPrefix + '/adminUpdateProfile', (req, res) => {
-      const { userID, targetUserID, updates } = req.body;
+      const { targetUserID, updates } = req.body;
+      const { userID } = req.cookies;
       hasServerPermission(userID, db, '/adminUpdateProfile').then(authorized => {
         if (authorized) {
           adminUpdateProfile(db, res, targetUserID, updates);
@@ -350,11 +358,11 @@ mongo_client.connect(
     });
 
     /**
-     * @param {String} body.userID Your userID
      * @param {String} body.targetUserID userID to delete
      */
     app.post(endpointPrefix + '/adminDeleteProfile', (req, res) => {
-      const { userID, targetUserID } = req.body;
+      const { targetUserID } = req.body;
+      const { userID } = req.cookies;
       hasServerPermission(userID, db, '/adminDeleteProfile').then(authorized => {
         if (authorized) {
           adminDeleteProfile(db, res, targetUserID);
