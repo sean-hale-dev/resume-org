@@ -1,4 +1,11 @@
-import { Card, Toolbar, Typography, Snackbar, Grow, Button } from '@material-ui/core';
+import {
+  Card,
+  Toolbar,
+  Typography,
+  Snackbar,
+  Grow,
+  Button,
+} from '@material-ui/core';
 import React, { Component } from 'react';
 import Header from './shared/header.js';
 import PageBody from './shared/pagebody.js';
@@ -47,10 +54,10 @@ class Reports extends Component {
 
   /**
    * Search for a string!
-   * @param {String} searchText 
+   * @param {String} searchText
    */
   handleSearch(searchText) {
-    const {userID} = this.props;
+    const { userID } = this.props;
     this.setState({
       openSnackBar: true,
       typeSnackBar: 'generating',
@@ -79,7 +86,16 @@ class Reports extends Component {
             'Could not generate report - the server did not respond.',
         });
         console.error(err);
-      });
+      })
+      .finally(
+        setTimeout(() => {
+          if (this.state.typeSnackBar == 'success') {
+            this.setState({
+              openSnackBar: false,
+            });
+          }
+        }, 5000)
+      );
   }
 
   handleSnackbarClose = (event, reason) => {
@@ -89,29 +105,43 @@ class Reports extends Component {
 
   /**
    * Go to the '/database' page with the search defined by newSearchText
-   * @param {String} newSearchText 
+   * @param {String} newSearchText
    */
   jumpToSearch(newSearchText) {
     const { location, history } = this.props;
     const { searchText } = this.state;
-    const reportSearch = (new URLSearchParams(location.search));
-    reportSearch.set("autoSearch", "true");
-    reportSearch.set("searchText", searchText);
-    history.replace({search: reportSearch.toString()});
+    const reportSearch = new URLSearchParams(location.search);
+    reportSearch.set('autoSearch', 'true');
+    reportSearch.set('searchText', searchText);
+    history.replace({ search: reportSearch.toString() });
     const search = new URL(window.location);
-    search.searchParams.set("searchText", newSearchText);
-    search.searchParams.set("autoSearch", "true");
-    search.pathname = "/database";
+    search.searchParams.set('searchText', newSearchText);
+    search.searchParams.set('autoSearch', 'true');
+    search.pathname = '/database';
     window.location = search.toString();
   }
 
   render() {
-    const { classes, userID, clientPermissions, location, history } = this.props;
+    const {
+      classes,
+      userID,
+      clientPermissions,
+      location,
+      history,
+    } = this.props;
     const { result, searchText } = this.state;
-    const skillsArray = (result && result.individualSkillMatches && Object.keys(result.individualSkillMatches)) || [];
+    const skillsArray =
+      (result &&
+        result.individualSkillMatches &&
+        Object.keys(result.individualSkillMatches)) ||
+      [];
     return (
       <>
-        <Header selectedPage="Reports" userID={userID} clientPermissions={clientPermissions} />
+        <Header
+          selectedPage="Reports"
+          userID={userID}
+          clientPermissions={clientPermissions}
+        />
         <PageBody>
           <Card>
             <SearchBar
@@ -138,7 +168,7 @@ class Reports extends Component {
                   </Typography>
                 ) : (
                   <>
-                    {result.employeeCount !== undefined &&
+                    {result.employeeCount !== undefined && (
                       <Typography>
                         There {result.employeeCount === 1 ? 'is' : 'are'}{' '}
                         {result.employeeCount} employee
@@ -146,52 +176,55 @@ class Reports extends Component {
                         organization.{' '}
                         {result.employeeCount === 1 ? '' : 'Of those:'}
                       </Typography>
-                    }
-                    {Object.entries(result.individualSkillMatches).length > 1 && 
-                    result.strictMatchCount !== undefined &&
-                      <Typography>
-                        {result.strictMatchCount}{result.strictMatchCount !== result.looseMatchCount && ' strictly'} match
-                        {result.strictMatchCount === 1 ? 'es' : ''} the query (
-                        {(
-                          (100.0 * result.strictMatchCount) /
-                          result.employeeCount
-                        ).toFixed(2)}
-                        % of the organization).
-                        <Button
-                          onClick={() => {
-                            this.jumpToSearch(searchText);
-                          }}
-                          value={result.employeeID}
-                        >
-                          View Resumes
-                          <ArrowForwardIcon />
-                        </Button>
-                      </Typography>
-                      
-                    }
-                    {Object.entries(result.individualSkillMatches).length > 1 && 
-                    result.looseMatchCount !== undefined &&
-                    result.strictMatchCount !== result.looseMatchCount &&
-                      <Typography>
-                        {result.looseMatchCount}{' '}
-                        {result.looseMatchCount === 1 ? 'has' : 'have'} at least
-                        one skill in the query (
-                        {(
-                          (100.0 * result.looseMatchCount) /
-                          result.employeeCount
-                        ).toFixed(2)}
-                        % of the organization).
-                        <Button
-                          onClick={() => {
-                            this.jumpToSearch(skillsArray.join(" | "));
-                          }}
-                          value={result.employeeID}
-                        >
-                          View Resumes
-                          <ArrowForwardIcon />
-                        </Button>
-                      </Typography>
-                    }
+                    )}
+                    {Object.entries(result.individualSkillMatches).length > 1 &&
+                      result.strictMatchCount !== undefined && (
+                        <Typography>
+                          {result.strictMatchCount}
+                          {result.strictMatchCount !== result.looseMatchCount &&
+                            ' strictly'}{' '}
+                          match
+                          {result.strictMatchCount === 1 ? 'es' : ''} the query
+                          (
+                          {(
+                            (100.0 * result.strictMatchCount) /
+                            result.employeeCount
+                          ).toFixed(2)}
+                          % of the organization).
+                          <Button
+                            onClick={() => {
+                              this.jumpToSearch(searchText);
+                            }}
+                            value={result.employeeID}
+                          >
+                            View Resumes
+                            <ArrowForwardIcon />
+                          </Button>
+                        </Typography>
+                      )}
+                    {Object.entries(result.individualSkillMatches).length > 1 &&
+                      result.looseMatchCount !== undefined &&
+                      result.strictMatchCount !== result.looseMatchCount && (
+                        <Typography>
+                          {result.looseMatchCount}{' '}
+                          {result.looseMatchCount === 1 ? 'has' : 'have'} at
+                          least one skill in the query (
+                          {(
+                            (100.0 * result.looseMatchCount) /
+                            result.employeeCount
+                          ).toFixed(2)}
+                          % of the organization).
+                          <Button
+                            onClick={() => {
+                              this.jumpToSearch(skillsArray.join(' | '));
+                            }}
+                            value={result.employeeID}
+                          >
+                            View Resumes
+                            <ArrowForwardIcon />
+                          </Button>
+                        </Typography>
+                      )}
                     {Object.entries(result.individualSkillMatches).map(
                       ([skill, count]) => (
                         <Typography>

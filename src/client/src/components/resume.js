@@ -61,22 +61,29 @@ class Resume extends Component {
   }
 
   /**
-   * Set the "skills" array to be the localized skill names rather than 
+   * Set the "skills" array to be the localized skill names rather than
    */
   localizeSkills() {
-    const {skills} = this.state;
-    axios.post(`http://${window.location.hostname}:8080/api/skill-display-names?assoc=true`, { skillarrays: [skills.map(skill => skill.toLowerCase())] }).then(result => {
-      const skill_assoc = result.data.display_assoc[0];
-      console.log(skill_assoc);
-      const skill_map = {};
-      skill_assoc.forEach(skill => {
-        skill_map[skill.skill] = skill.display_name || skill.skill;
+    const { skills } = this.state;
+    axios
+      .post(
+        `http://${window.location.hostname}:8080/api/skill-display-names?assoc=true`,
+        { skillarrays: [skills.map((skill) => skill.toLowerCase())] }
+      )
+      .then((result) => {
+        const skill_assoc = result.data.display_assoc[0];
+        console.log(skill_assoc);
+        const skill_map = {};
+        skill_assoc.forEach((skill) => {
+          skill_map[skill.skill] = skill.display_name || skill.skill;
+        });
+        console.log(skill_map);
+        const updatedSkills = skills
+          .map((skill) => skill_map[skill.toLowerCase()] || skill)
+          .sort();
+        console.log(updatedSkills);
+        this.setState({ skills: updatedSkills });
       });
-      console.log(skill_map);
-      const updatedSkills = skills.map(skill => skill_map[skill.toLowerCase()] || skill).sort();
-      console.log(updatedSkills);
-      this.setState({skills: updatedSkills});
-    });
   }
 
   componentDidMount() {
@@ -88,14 +95,16 @@ class Resume extends Component {
       })
       .then((res) => {
         if (res && res.data && res.data.skills) {
-          this.setState({ skills: res.data.skills.sort() }, () => this.localizeSkills());
+          this.setState({ skills: res.data.skills.sort() }, () =>
+            this.localizeSkills()
+          );
         }
       });
   }
 
   /**
    * View an employee's resume
-   * @param {String} employeeID 
+   * @param {String} employeeID
    */
   openResumeDialog = (employeeID) => {
     this.setState({
@@ -116,7 +125,7 @@ class Resume extends Component {
 
   /**
    * Set the file to what the user uploads
-   * @param {*} file 
+   * @param {*} file
    */
   setResume(file) {
     if (file !== undefined) {
@@ -160,11 +169,14 @@ class Resume extends Component {
           }
         )
         .then((res) => {
-          this.setState({
-            skills: res.data && res.data.skills ? res.data.skills.sort() : [],
-            openSnackBar: true,
-            typeSnackBar: 'success',
-          }, () => this.localizeSkills());
+          this.setState(
+            {
+              skills: res.data && res.data.skills ? res.data.skills.sort() : [],
+              openSnackBar: true,
+              typeSnackBar: 'success',
+            },
+            () => this.localizeSkills()
+          );
         })
         .catch((err) => {
           this.setState({
@@ -172,7 +184,16 @@ class Resume extends Component {
             typeSnackBar: 'error',
           });
           console.error(err);
-        });
+        })
+        .finally(
+          setTimeout(() => {
+            if (this.state.typeSnackBar == 'success') {
+              this.setState({
+                openSnackBar: false,
+              });
+            }
+          }, 5000)
+        );
     } else {
       console.log('Upload Fail - File not defined');
     }
@@ -197,7 +218,7 @@ class Resume extends Component {
   /**
    * Edit a skill at index
    * @param {integer} index Index of the skill
-   * @param {String} newValue 
+   * @param {String} newValue
    */
   onSkillEdit(index, newValue) {
     const { editedSkills } = this.state;
@@ -241,24 +262,31 @@ class Resume extends Component {
   saveEdits() {
     const { editedSkills } = this.state;
     const { userID } = this.props;
-    this.setState({
-      isEditing: false,
-      skills: editedSkills ? editedSkills.map((skill) => skill).sort() : [],
-    }, () => {
-      axios.post(
-        `http://${window.location.hostname}:8080/api/updateResumeSkills`,
-        {
-          userID,
-          skills: [
-            ...new Set(
-              editedSkills ? editedSkills.filter((skill) => skill).sort() : []
-            ),
-          ],
-        }
-      ).then(() => {
-        this.localizeSkills();
-      });
-    });
+    this.setState(
+      {
+        isEditing: false,
+        skills: editedSkills ? editedSkills.map((skill) => skill).sort() : [],
+      },
+      () => {
+        axios
+          .post(
+            `http://${window.location.hostname}:8080/api/updateResumeSkills`,
+            {
+              userID,
+              skills: [
+                ...new Set(
+                  editedSkills
+                    ? editedSkills.filter((skill) => skill).sort()
+                    : []
+                ),
+              ],
+            }
+          )
+          .then(() => {
+            this.localizeSkills();
+          });
+      }
+    );
   }
 
   render() {
