@@ -11,3 +11,4 @@ src/resumeParser/dist
 deploy.sh
 src/client/build
 src/server/resumes
+Credentials/
