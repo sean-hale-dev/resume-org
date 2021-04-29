@@ -120,7 +120,7 @@ class Database extends Component {
       typeSnackBar: 'searching',
       snackBarText: 'Searching...',
     });
-    axios.post(`http://${window.location.hostname}:8080/api/resume-search`, {queryString: searchText, userID}).then(res => {
+    axios.post(`/api/resume-search`, {queryString: searchText}).then(res => {
       this.setState({
         searchResults: res.data.resumes.map((data, index) => ({
           name: data.employee || "Unknown Employee",
@@ -142,7 +142,7 @@ class Database extends Component {
       });
       
       //////// getting the display skills
-      axios.post(`http://${window.location.hostname}:8080/api/skill-display-names?assoc=false`, { skillarrays: skillsToFetch }).then(result => {
+      axios.post(`/api/skill-display-names?assoc=false`, { skillarrays: skillsToFetch }).then(result => {
         
         this.setState({
           searchResults: this.state.searchResults.map((data, index) => ({

@@ -115,7 +115,7 @@ class Admin extends Component {
 
   componentDidMount() {
     const {userID} = this.props;
-    axios.post(`http://${window.location.hostname}:8080/api/adminGetProfiles`, {userID}).then(res => {
+    axios.get(`/api/adminGetProfiles`).then(res => {
       this.setState({users: res.data.map((user, index) => ({
         index,
         editing: false,
@@ -163,7 +163,7 @@ class Admin extends Component {
     });
     const acceptFunction = () => {
       console.log(`Sending updates to server for ${userData.userID}: ${JSON.stringify(updates)}`)
-      axios.post(`http://${window.location.hostname}:8080/api/adminUpdateProfile`, {userID, targetUserID: userData.userID, updates}).then(res => {
+      axios.post(`/api/adminUpdateProfile`, {targetUserID: userData.userID, updates}).then(res => {
         if (userData.userID == userID && updates.userID) {
           cookies.set("userID", updates.userID);
         }
@@ -195,7 +195,7 @@ class Admin extends Component {
       "Are you sure you want to delete this user?",
       `User deletion cannot be undone! Are you sure you want to remove ${user.userData.userID} from the organization?`,
       () => {
-        axios.post(`http://${window.location.hostname}:8080/api/adminDeleteProfile`, {userID, targetUserID: user.userData.userID});
+        axios.post(`/api/adminDeleteProfile`, {targetUserID: user.userData.userID});
         users.splice(index, 1);
         this.setState({users});
       }
