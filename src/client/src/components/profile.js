@@ -48,7 +48,7 @@ class Profile extends Component {
   componentDidMount() {
     const { userID } = this.props;
     axios
-      .post(`http://${window.location.hostname}:8080/api/getProfile`, {
+      .get(`/api/getProfile`, {
         userID,
       })
       .then((res) => {
@@ -106,8 +106,7 @@ class Profile extends Component {
   saveEdits() {
     const { userID } = this.props;
     const { newProfileDetails } = this.state;
-    axios.post(`http://${window.location.hostname}:8080/api/updateProfile`, {
-      userID,
+    axios.post(`/api/updateProfile`, {
       details: newProfileDetails,
     });
     this.setState({

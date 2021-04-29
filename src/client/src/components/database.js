@@ -122,10 +122,7 @@ class Database extends Component {
       snackBarText: 'Searching...',
     });
     axios
-      .post(`http://${window.location.hostname}:8080/api/resume-search`, {
-        queryString: searchText,
-        userID,
-      })
+      .post(`/api/resume-search`, { queryString: searchText })
       .then((res) => {
         this.setState({
           searchResults: res.data.resumes.map((data, index) => ({
@@ -149,10 +146,9 @@ class Database extends Component {
 
         //////// getting the display skills
         axios
-          .post(
-            `http://${window.location.hostname}:8080/api/skill-display-names?assoc=false`,
-            { skillarrays: skillsToFetch }
-          )
+          .post(`/api/skill-display-names?assoc=false`, {
+            skillarrays: skillsToFetch,
+          })
           .then((result) => {
             this.setState({
               searchResults: this.state.searchResults.map((data, index) => ({

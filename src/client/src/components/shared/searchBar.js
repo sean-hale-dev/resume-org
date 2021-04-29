@@ -121,7 +121,7 @@ class SearchBar extends Component {
       this.handleSearch();
     }
     axios
-      .post(`http://${window.location.hostname}:8080/api/getAllSearchableSkills`, {userID})
+      .get(`/api/getAllSearchableSkills`)
       .then((res) => {
         if (res && Array.isArray(res.data)) {
           const skills = res.data;
