@@ -457,9 +457,10 @@ function getSkillDisplayNameArrays(db, res, skillarrays, assoc) {
       skillarrays.forEach(arr => {
         var in_arr = [];
         arr.forEach(element => {
+          const found_skill = full_skills.find(x => x.skill == element);
           (assoc == true) ?
-          (in_arr.push({ skill: element, display_name: full_skills.find(x => x.skill == element).display_name })) :
-          (in_arr.push(full_skills.find(x => x.skill == element).display_name));
+          (in_arr.push({ skill: element, display_name: found_skill ? found_skill.display_name : element})) :
+          (in_arr.push(found_skill ? found_skill.display_name : element));
         });
         display_names.push(in_arr);
       });
