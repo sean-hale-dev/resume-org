@@ -70,6 +70,7 @@ class Resume extends Component {
       resumeDialogOpen: false,
       resumeDialogTarget: '',
       existingResume: false,
+      lastResumeAttached: "",
     };
   }
 
@@ -144,6 +145,7 @@ class Resume extends Component {
       console.log('Set Success - Initial file: ', this.state.resumeFile);
       this.setState({
         resumeFile: file,
+        lastResumeAttached: file.name,
       });
       console.log('Set Success - Uploaded file: ', this.state.resumeFile);
     } else {
@@ -152,6 +154,7 @@ class Resume extends Component {
         resumeFile: undefined,
       });
     }
+    this.handleSnackbarClose();
   }
 
   /**
@@ -479,7 +482,7 @@ class Resume extends Component {
                 : this.state.typeSnackBar === 'error'
                 ? 'There was an error uploading the file.'
                 : this.state.typeSnackBar === 'success'
-                ? `The file '${this.state.resumeFile.name}' was successfully uploaded.`
+                ? `The file '${this.state.lastResumeAttached}' was successfully uploaded.`
                 : ''}
             </MuiAlert>
           </Snackbar>
