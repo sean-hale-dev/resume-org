@@ -69,6 +69,7 @@ class Resume extends Component {
       typeSnackBar: 'loading',
       resumeDialogOpen: false,
       resumeDialogTarget: '',
+      existingResume: false,
     };
   }
 
@@ -102,8 +103,12 @@ class Resume extends Component {
     if (!userID) return;
     axios.get(`/api/getResumeSkills`).then((res) => {
       if (res && res.data && res.data.skills) {
-        this.setState({ skills: res.data.skills.sort() }, () =>
-          this.localizeSkills()
+        this.setState(
+          {
+            skills: res.data.skills.sort(),
+            existingResume: res.data.skills.length > 0,
+          },
+          () => this.localizeSkills()
         );
       }
     });
@@ -442,6 +447,7 @@ class Resume extends Component {
                 variant="contained"
                 color="primary"
                 onClick={() => this.openResumeDialog(userID)}
+                disabled={!this.state.existingResume}
               >
                 View your resume
               </Button>
