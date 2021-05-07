@@ -176,7 +176,7 @@ async def asyncAPICheck():
 
     with alive_bar(len(skillset), title="Looking up tokens...", bar="circles") as bar:
         for skill in skillset:
-            deferResponses[skill] = session.get(f"https://api.promptapi.com/skills?q={skill}&count=1", headers={"apikey": '3fB6ppgySBe5rN3w2kA91f3qLRq8yINc'})
+            deferResponses[skill] = session.get(f"https://api.promptapi.com/skills?q={skill}&count=1", headers={"apikey": os.environ['PROMPT_API_KEY']})
 
         for skill, resp in deferResponses.items():
             response = await resp 
