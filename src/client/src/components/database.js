@@ -56,8 +56,8 @@ const styles = (theme) => ({
 
 /**
  * Compare two strings
- * @param {String} a 
- * @param {String} b 
+ * @param {String} a
+ * @param {String} b
  * @returns 1 if a > b, -1 if a < 0, 0 if a == b
  */
 const stringCompare = (a, b) => {
@@ -89,10 +89,11 @@ class Database extends Component {
 
   /**
    * View an employee's resume
-   * @param {String} employeeID 
+   * @param {String} employeeID
    */
   openResumeDialog = (employeeID) => {
     this.setState({
+      openSnackBar: false,
       resumeDialogOpen: true,
       resumeDialogTarget: employeeID,
     });
@@ -110,64 +111,78 @@ class Database extends Component {
 
   /**
    * Search for a string!
-   * @param {String} searchText 
+   * @param {String} searchText
    */
   handleSearch(searchText) {
-    const {userID} = this.props;
+    const { userID } = this.props;
     console.log(`Searching for ${searchText}`);
     this.setState({
       openSnackBar: true,
       typeSnackBar: 'searching',
       snackBarText: 'Searching...',
     });
-    axios.post(`/api/resume-search`, {queryString: searchText}).then(res => {
-      this.setState({
-        searchResults: res.data.resumes.map((data, index) => ({
-          name: data.employee || "Unknown Employee",
-          matchedSkills: data.skills || [], 
-          displaySkills: [],
-          position: data.position || "Unknown Position",
-          experience: data.experience || "Unknown",
-          index,
-          employeeID: data.employeeID || "",
-        })),
-        openSnackBar: true,
-        typeSnackBar: res.data.status == 0 ? "success" : "error",
-        snackBarText: res.data.message,
-      });
-      
-      const skillsToFetch = []
-      this.state.searchResults.forEach(searchResult => {
-        skillsToFetch.push(searchResult.matchedSkills);
-      });
-      
-      //////// getting the display skills
-      axios.post(`/api/skill-display-names?assoc=false`, { skillarrays: skillsToFetch }).then(result => {
-        
+    axios
+      .post(`/api/resume-search`, { queryString: searchText })
+      .then((res) => {
         this.setState({
-          searchResults: this.state.searchResults.map((data, index) => ({
-            name: data.name,
-            matchedSkills: data.matchedSkills, 
-            displaySkills: result.data.display_assoc[index],
-            position: data.position,
-            experience: data.experience,
+          searchResults: res.data.resumes.map((data, index) => ({
+            name: data.employee || 'Unknown Employee',
+            matchedSkills: data.skills || [],
+            displaySkills: [],
+            position: data.position || 'Unknown Position',
+            experience: data.experience || 'Unknown',
             index,
-            employeeID: data.employeeID,
-          }))
+            employeeID: data.employeeID || '',
+          })),
+          openSnackBar: true,
+          typeSnackBar: res.data.status == 0 ? 'success' : 'error',
+          snackBarText: res.data.message,
         });
+
+        const skillsToFetch = [];
+        this.state.searchResults.forEach((searchResult) => {
+          skillsToFetch.push(searchResult.matchedSkills);
+        });
+
+        //////// getting the display skills
+        axios
+          .post(`/api/skill-display-names?assoc=false`, {
+            skillarrays: skillsToFetch,
+          })
+          .then((result) => {
+            this.setState({
+              searchResults: this.state.searchResults.map((data, index) => ({
+                name: data.name,
+                matchedSkills: data.matchedSkills,
+                displaySkills: result.data.display_assoc[index],
+                position: data.position,
+                experience: data.experience,
+                index,
+                employeeID: data.employeeID,
+              })),
+            });
+          })
+          .catch((err) => {
+            console.error(err);
+          });
       })
       .catch((err) => {
+        this.setState({
+          openSnackBar: true,
+          typeSnackBar: 'error',
+          snackBarText: 'Search failed - the server did not respond.',
+        });
         console.error(err);
-      });
-    })
-    .catch((err) => {
-      this.setState({
-        openSnackBar: true,
-        typeSnackBar: "error",
-        snackBarText: "Search failed - the server did not respond."
-      });
-      console.error(err);
-    });
+      })
+      .finally(
+        setTimeout(() => {
+          if (this.state.typeSnackBar == 'success') {
+            this.setState({
+              openSnackBar: false,
+            });
+          }
+        }, 5000)
+      );
   }
 
   handleSnackbarClose = (event, reason) => {
@@ -176,7 +191,13 @@ class Database extends Component {
   };
 
   render() {
-    const { classes, userID, clientPermissions, location, history } = this.props;
+    const {
+      classes,
+      userID,
+      clientPermissions,
+      location,
+      history,
+    } = this.props;
     const { searchResults } = this.state;
     const sortOptions = {
       '----': () => {
@@ -215,7 +236,11 @@ class Database extends Component {
 
     return (
       <>
-        <Header selectedPage="Resume Database" userID={userID}  clientPermissions={clientPermissions}/>
+        <Header
+          selectedPage="Resume Database"
+          userID={userID}
+          clientPermissions={clientPermissions}
+        />
         <PageBody>
           <Card>
             <SearchBar

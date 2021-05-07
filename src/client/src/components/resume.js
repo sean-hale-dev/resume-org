@@ -42,15 +42,15 @@ const styles = (theme) => ({
 
 /**
  * Compare two strings
- * @param {String} a 
- * @param {String} b 
+ * @param {String} a
+ * @param {String} b
  * @returns 1 if a > b, -1 if a < 0, 0 if a == b
  */
- const stringCompare = (a, b) => {
+const stringCompare = (a, b) => {
   if (a < b) return -1;
   if (a > b) return 1;
   return 0;
-}
+};
 
 /**
  * Props:
@@ -69,43 +69,55 @@ class Resume extends Component {
       typeSnackBar: 'loading',
       resumeDialogOpen: false,
       resumeDialogTarget: '',
+      existingResume: false,
+      lastResumeAttached: "",
     };
   }
 
   /**
-   * Set the "skills" array to be the localized skill names rather than 
+   * Set the "skills" array to be the localized skill names rather than
    */
   localizeSkills() {
-    const {skills} = this.state;
-    axios.post(`/api/skill-display-names?assoc=true`, { skillarrays: [skills.map(skill => skill.toLowerCase())] }).then(result => {
-      const skill_assoc = result.data.display_assoc[0];
-      console.log(skill_assoc);
-      const skill_map = {};
-      skill_assoc.forEach(skill => {
-        skill_map[skill.skill] = skill.display_name || skill.skill;
+    const { skills } = this.state;
+    axios
+      .post(`/api/skill-display-names?assoc=true`, {
+        skillarrays: [skills.map((skill) => skill.toLowerCase())],
+      })
+      .then((result) => {
+        const skill_assoc = result.data.display_assoc[0];
+        console.log(skill_assoc);
+        const skill_map = {};
+        skill_assoc.forEach((skill) => {
+          skill_map[skill.skill] = skill.display_name || skill.skill;
+        });
+        console.log(skill_map);
+        const updatedSkills = skills
+          .map((skill) => skill_map[skill.toLowerCase()] || skill)
+          .sort((a, b) => stringCompare(a.toLowerCase(), b.toLowerCase()));
+        console.log(updatedSkills);
+        this.setState({ skills: updatedSkills });
       });
-      console.log(skill_map);
-      const updatedSkills = skills.map(skill => skill_map[skill.toLowerCase()] || skill).sort((a, b) => stringCompare(a.toLowerCase(), b.toLowerCase()));
-      console.log(updatedSkills);
-      this.setState({skills: updatedSkills});
-    });
   }
 
   componentDidMount() {
     const { userID } = this.props;
     if (!userID) return;
-    axios
-      .get(`/api/getResumeSkills`)
-      .then((res) => {
-        if (res && res.data && res.data.skills) {
-          this.setState({ skills: res.data.skills.sort((a, b) => stringCompare(a.toLowerCase(), b.toLowerCase())) }, () => this.localizeSkills());
-        }
-      });
+    axios.get(`/api/getResumeSkills`).then((res) => {
+      if (res && res.data && res.data.skills) {
+        this.setState(
+          {
+            skills: res.data.skills.sort(),
+            existingResume: res.data.skills.length > 0,
+          },
+          () => this.localizeSkills()
+        );
+      }
+    });
   }
 
   /**
    * View an employee's resume
-   * @param {String} employeeID 
+   * @param {String} employeeID
    */
   openResumeDialog = (employeeID) => {
     this.setState({
@@ -126,13 +138,14 @@ class Resume extends Component {
 
   /**
    * Set the file to what the user uploads
-   * @param {*} file 
+   * @param {*} file
    */
   setResume(file) {
     if (file !== undefined) {
       console.log('Set Success - Initial file: ', this.state.resumeFile);
       this.setState({
         resumeFile: file,
+        lastResumeAttached: file.name,
       });
       console.log('Set Success - Uploaded file: ', this.state.resumeFile);
     } else {
@@ -141,6 +154,7 @@ class Resume extends Component {
         resumeFile: undefined,
       });
     }
+    this.handleSnackbarClose();
   }
 
   /**
@@ -160,21 +174,25 @@ class Resume extends Component {
       formData.append('resume', this.state.resumeFile);
       formData.append('userID', this.props.userID);
       axios
-        .post(
-          `/api/resume-upload`,
-          formData,
-          {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          }
-        )
+        .post(`/api/resume-upload`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        })
         .then((res) => {
-          this.setState({
-            skills: res.data && res.data.skills ? res.data.skills.sort((a, b) => stringCompare(a.toLowerCase(), b.toLowerCase())) : [],
-            openSnackBar: true,
-            typeSnackBar: 'success',
-          }, () => this.localizeSkills());
+          this.setState(
+            {
+              skills:
+                res.data && res.data.skills
+                  ? res.data.skills.sort((a, b) =>
+                      stringCompare(a.toLowerCase(), b.toLowerCase())
+                    )
+                  : [],
+              openSnackBar: true,
+              typeSnackBar: 'success',
+            },
+            () => this.localizeSkills()
+          );
         })
         .catch((err) => {
           this.setState({
@@ -182,7 +200,16 @@ class Resume extends Component {
             typeSnackBar: 'error',
           });
           console.error(err);
-        });
+        })
+        .finally(
+          setTimeout(() => {
+            if (this.state.typeSnackBar == 'success') {
+              this.setState({
+                openSnackBar: false,
+              });
+            }
+          }, 5000)
+        );
     } else {
       console.log('Upload Fail - File not defined');
     }
@@ -207,7 +234,7 @@ class Resume extends Component {
   /**
    * Edit a skill at index
    * @param {integer} index Index of the skill
-   * @param {String} newValue 
+   * @param {String} newValue
    */
   onSkillEdit(index, newValue) {
     const { editedSkills } = this.state;
@@ -251,23 +278,29 @@ class Resume extends Component {
   saveEdits() {
     const { editedSkills } = this.state;
     const { userID } = this.props;
-    this.setState({
-      isEditing: false,
-      skills: editedSkills ? editedSkills.map((skill) => skill).sort((a, b) => stringCompare(a.toLowerCase(), b.toLowerCase())) : [],
-    }, () => {
-      axios.post(
-        `/api/updateResumeSkills`,
-        {
-          skills: [
-            ...new Set(
-              editedSkills ? editedSkills.filter((skill) => skill).sort() : []
-            ),
-          ],
-        }
-      ).then(() => {
-        this.localizeSkills();
-      });
-    });
+    this.setState(
+      {
+        isEditing: false,
+        skills: editedSkills
+          ? editedSkills
+              .map((skill) => skill)
+              .sort((a, b) => stringCompare(a.toLowerCase(), b.toLowerCase()))
+          : [],
+      },
+      () => {
+        axios
+          .post(`/api/updateResumeSkills`, {
+            skills: [
+              ...new Set(
+                editedSkills ? editedSkills.filter((skill) => skill).sort() : []
+              ),
+            ],
+          })
+          .then(() => {
+            this.localizeSkills();
+          });
+      }
+    );
   }
 
   render() {
@@ -417,6 +450,7 @@ class Resume extends Component {
                 variant="contained"
                 color="primary"
                 onClick={() => this.openResumeDialog(userID)}
+                disabled={!this.state.existingResume}
               >
                 View your resume
               </Button>
@@ -448,7 +482,7 @@ class Resume extends Component {
                 : this.state.typeSnackBar === 'error'
                 ? 'There was an error uploading the file.'
                 : this.state.typeSnackBar === 'success'
-                ? `The file '${this.state.resumeFile.name}' was successfully uploaded.`
+                ? `The file '${this.state.lastResumeAttached}' was successfully uploaded.`
                 : ''}
             </MuiAlert>
           </Snackbar>
